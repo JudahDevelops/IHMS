@@ -1,0 +1,76 @@
+
+digraph IHMS_Engine_Workflow {
+    graph [rankdir=TB, splines=spline, bgcolor="#FFFFFF", pad="0.4", nodesep=0.5, ranksep=0.7];
+    node [fontname="Helvetica, Arial, sans-serif", fontsize=10, style="filled,rounded", shape=box];
+    edge [fontname="Helvetica, Arial, sans-serif", fontsize=9, color="#1E3A8A", penwidth=1.2];
+
+    start [label="Student Lodges Maintenance Complaint
+(Description, Room Number, Photos/Notes)", fillcolor="#DBEAFE", color="#1E40AF", shape=ellipse];
+    triage [label="Complaint Triage Engine
+(Keyword Matcher / TypeSafe Jev AI)", fillcolor="#FEF3C7", color="#D97706"];
+    classify [label="Assigns Category, Urgency & Maintenance Unit:
+* Plumbing | Electrical | Carpentry | Sanitation | Other
+* Urgent (24h) | Normal (72h) | Low (7 days)", fillcolor="#FEF9C3", color="#CA8A04"];
+    deadline [label="Compute Exact SLA Resolution Deadline: d
+(Table IV Matrix)", fillcolor="#DCFCE7", color="#16A34A"];
+    dispatch [label="Level 0: Assigned to Maintenance Unit
+* Status: OPEN / ASSIGNED
+* Outbound Email to Unit Head
+* History Log Created", fillcolor="#E0E7FF", color="#4338CA"];
+    
+    scheduler [label="APScheduler Daemon
+(Periodic Evaluation Every 15 Minutes)", fillcolor="#F1F5F9", color="#475569", shape=diamond];
+    
+    check_status [label="Is Complaint Still Open / In Progress?
+(Unresolved Status)", fillcolor="#F8FAFC", color="#64748B", shape=diamond];
+    
+    resolved_flow [label="Complaint Resolved by Maintenance Officer
+* Timestamp Logged
+* Email Confirmation to Student
+* Feedback Rating (1-5 Stars) Captured", fillcolor="#D1FAE5", color="#059669"];
+    
+    eval_elapsed [label="Compute Elapsed Time t vs Deadline d:
+L = 0  if  t < d
+L = 1  if  d <= t < 2d
+L = 2  if  t >= 2d", fillcolor="#FEE2E2", color="#DC2626"];
+
+    level0 [label="Level 0 (t < d)
+Within SLA Deadline
+Normal Unit Processing Queue", fillcolor="#ECFDF5", color="#10B981"];
+    level1 [label="Level 1 Escalation (d <= t < 2d)
+* Flagged OVERDUE
+* Automated SMTP Email to Hall Warden
+* Audit History Entry: L1 Alert", fillcolor="#FFEDD5", color="#EA580C"];
+    level2 [label="Level 2 Escalation (t >= 2d)
+* Severe Critical Breach Flagged
+* Automated SMTP Email to Student Affairs
+* High-Priority Alert on Admin Dashboard
+* Audit History Entry: L2 Alert", fillcolor="#FEE2E2", color="#B91C1C"];
+
+    analytics [label="Live Reporting & Analytics Service:
+* Occupancy Rates by Block
+* Average Resolution Time (MTTR) by Urgency
+* Overdue Breakdown
+* Recurring Fault Rooms (>=3 same category in 30 days)", fillcolor="#EDE9FE", color="#6D28D9"];
+
+    start -> triage;
+    triage -> classify;
+    classify -> deadline;
+    deadline -> dispatch;
+    dispatch -> scheduler;
+    scheduler -> check_status;
+    check_status -> resolved_flow [label="Yes (Resolved)"];
+    check_status -> eval_elapsed [label="No (Open/Active)"];
+    
+    eval_elapsed -> level0 [label="t < d"];
+    eval_elapsed -> level1 [label="d <= t < 2d"];
+    eval_elapsed -> level2 [label="t >= 2d"];
+
+    level1 -> scheduler [label="Wait next interval"];
+    level2 -> scheduler [label="Wait next interval"];
+    level0 -> scheduler [label="Wait next interval"];
+
+    resolved_flow -> analytics;
+    level1 -> analytics;
+    level2 -> analytics;
+}

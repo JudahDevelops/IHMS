@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IHMS Database Relational Architecture & ERD Viewer</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --panel-bg: #111827;
+      --card-bg: #1f2937;
+      --card-border: #374151;
+      --text: #f9fafb;
+      --text-muted: #9ca3af;
+      --primary: #38bdf8;
+      --primary-dark: #0284c7;
+      --accent: #2563eb;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Sidebar */
+    #sidebar {
+      width: 320px;
+      min-width: 320px;
+      background: var(--panel-bg);
+      border-right: 1px solid var(--card-border);
+      display: flex;
+      flex-direction: column;
+      z-index: 10;
+      box-shadow: 4px 0 20px rgba(0,0,0,0.4);
+    }
+    .header-box {
+      padding: 18px;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .badge-sub {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 4px;
+    }
+    h1 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.3;
+    }
+    .subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .search-box {
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .search-box input {
+      width: 100%;
+      padding: 9px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--card-border);
+      background: #090d16;
+      color: #fff;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-box input:focus {
+      border-color: var(--primary);
+    }
+
+    .table-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 14px;
+    }
+    .table-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-bottom: 4px;
+      transition: all 0.15s;
+      font-size: 13px;
+      border: 1px solid transparent;
+    }
+    .table-item:hover {
+      background: rgba(56, 189, 248, 0.1);
+      border-color: rgba(56, 189, 248, 0.2);
+      color: var(--primary);
+    }
+    .table-item.active {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: var(--primary);
+      color: #fff;
+      font-weight: 600;
+    }
+    .col-count {
+      font-size: 11px;
+      color: var(--text-muted);
+      background: rgba(255,255,255,0.06);
+      padding: 2px 7px;
+      border-radius: 10px;
+    }
+
+    .sidebar-footer {
+      padding: 14px 18px;
+      border-top: 1px solid var(--card-border);
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Main Viewport */
+    #viewport {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background: #0a0e17;
+      background-image: 
+        radial-gradient(#1f2937 1px, transparent 1px),
+        radial-gradient(#1f2937 1px, #0a0e17 1px);
+      background-size: 32px 32px;
+      background-position: 0 0, 16px 16px;
+      cursor: grab;
+      user-select: none;
+    }
+    #viewport:active {
+      cursor: grabbing;
+    }
+
+    /* Floating Toolbar */
+    .toolbar {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: rgba(17, 24, 39, 0.95);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      display: flex;
+      padding: 5px;
+      gap: 6px;
+      z-index: 20;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      backdrop-filter: blur(8px);
+    }
+    .tool-btn {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #fff;
+      padding: 7px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+      transition: all 0.15s;
+    }
+    .tool-btn:hover {
+      background: rgba(255,255,255,0.15);
+      border-color: rgba(255,255,255,0.25);
+    }
+    .tool-btn.primary {
+      background: var(--primary-dark);
+      border-color: var(--primary);
+    }
+    .tool-btn.primary:hover {
+      background: var(--primary);
+      color: #000;
+    }
+
+    /* Canvas Stage */
+    #canvas-stage {
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform-origin: 0 0;
+      will-change: transform;
+      padding: 30px;
+    }
+
+    .svg-wrapper {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+      border: 1px solid #cbd5e1;
+      display: inline-block;
+    }
+
+    .diagram-svg {
+      display: block;
+      max-width: none;
+      height: auto;
+    }
+
+    /* Highlighted table in SVG */
+    .highlight-table path {
+      stroke: #0284c7 !important;
+      stroke-width: 3px !important;
+      filter: drop-shadow(0 0 10px rgba(2, 132, 199, 0.9));
+    }
+
+    /* Legend Overlay */
+    .legend {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      background: rgba(17, 24, 39, 0.95);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 10px 16px;
+      display: flex;
+      gap: 16px;
+      font-size: 12px;
+      backdrop-filter: blur(8px);
+      z-index: 10;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar Directory -->
+  <aside id="sidebar">
+    <div class="header-box">
+      <span class="badge-sub">Nile University • Group 39</span>
+      <h1>IHMS Schema Inspector</h1>
+      <p class="subtitle">Normalized Relational Architecture (16 Tables)</p>
+    </div>
+
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="Search tables...">
+    </div>
+
+    <div class="table-list" id="tableList"></div>
+
+    <div class="sidebar-footer">
+      <strong>Lecturer Presentation Tip:</strong><br>
+      • Click any table to focus and highlight.<br>
+      • Drag to Pan • Mouse wheel to Zoom.<br>
+      • Use 'Switch: Workflow Engine' to show Escalation.<br>
+      • Works in any browser offline.
+    </div>
+  </aside>
+
+  <!-- Viewport -->
+  <main id="viewport">
+    <div class="toolbar">
+      <button class="tool-btn" id="btnZoomIn">➕ Zoom In</button>
+      <button class="tool-btn" id="btnZoomOut">➖ Zoom Out</button>
+      <button class="tool-btn" id="btnReset">🔄 Reset</button>
+      <button class="tool-btn primary" id="btnToggleView">👁️ Switch: Workflow Engine</button>
+      <a class="tool-btn" href="assets/ihms_erd.png" target="_blank" download="ihms_erd.png">📥 PNG</a>
+    </div>
+
+    <div id="canvas-stage">
+      <div class="svg-wrapper" id="erdWrapper">
+        <svg id="svg-erd" class="diagram-svg" width="1083pt" height="1186pt"
+ viewBox="0.00 0.00 1083.00 1186.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(28.8 1157.67)">
+<title>IHMS_ERD</title>
+<polygon fill="#ffffff" stroke="none" points="-28.8,28.8 -28.8,-1157.67 1054.05,-1157.67 1054.05,28.8 -28.8,28.8"/>
+<!-- users -->
+<g id="node1" class="node">
+<title>users</title>
+<path fill="none" stroke="#64748b" d="M20,-608C20,-608 159.25,-608 159.25,-608 165.25,-608 171.25,-614 171.25,-620 171.25,-620 171.25,-755.5 171.25,-755.5 171.25,-761.5 165.25,-767.5 159.25,-767.5 159.25,-767.5 20,-767.5 20,-767.5 14,-767.5 8,-761.5 8,-755.5 8,-755.5 8,-620 8,-620 8,-614 14,-608 20,-608"/>
+<polygon fill="#1e3a8a" stroke="none" points="9,-750.75 9,-766.5 170.25,-766.5 170.25,-750.75 9,-750.75"/>
+<text xml:space="preserve" text-anchor="start" x="77.25" y="-755.95" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00" fill="white">users</text>
+<text xml:space="preserve" text-anchor="start" x="12" y="-740.2" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00">id</text>
+<text xml:space="preserve" text-anchor="start" x="134.25" y="-741" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [PK]</text>
+<text xml:space="preserve" text-anchor="start" x="12" y="-725.25" font-family="Helvetica, Arial, sans-serif" font-size="9.00">username</text>
+<text xml:space="preserve" text-anchor="start" x="86.25" y="-725.25" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">VARCHAR(50) [UQ]</text>
+<text xml:space="preserve" text-anchor="start" x="12" y="-709.5" font-family="Helvetica, Arial, sans-serif" font-size="9.00">email</text>
+<text xml:space="preserve" text-anchor="start" x="81" y="-709.5" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">VARCHAR(100) [UQ]</text>
+<text xml:space="preserve" text-anchor="start" x="12" y="-693.75" font-family="Helvetica, Arial, sans-serif" font-size="9.00">password</text>
+<text xml:space="preserve" text-anchor="start" x="102" y="-693.75" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">VARCHAR(255)</text>
+<text xml:space="preserve" text-anchor="start" x="12" y="-678" font-family="Helvetica, Arial, sans-serif" font-size="9.00">first_name</text>
+<text xml:space="preserve" text-anchor="start" x="107.25" y="-678" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">VARCHAR(50)</text>
+<text xml:space="preserve" text-anchor="start" x="12" y="-662.25" font-family="Helvetica, Arial, sans-serif" font-size="9.00">last_name</text>
+<text xml:space="preserve" text-anchor="start" x="107.25" y="-662.25" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">VARCHAR(50)</text>
+<text xml:space="preserve" text-anchor="start" x="12" y="-646.5" font-family="Helvetica, Arial, sans-serif" font-size="9.00">phone_number</text>
+<text xml:space="preserve" text-anchor="start" x="107.25" y="-646.5" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">VARCHAR(20)</text>
+<text xml:space="preserve" text-anchor="start" x="12" y="-630.75" font-family="Helvetica, Arial, sans-serif" font-size="9.00">is_active</text>
+<text xml:space="preserve" text-anchor="start" x="123.75" y="-630.75" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">BOOLEAN</text>
+<text xml:space="preserve" text-anchor="start" x="12" y="-615" font-family="Helvetica, Arial, sans-serif" font-size="9.00">created_at</text>
+<text xml:space="preserve" text-anchor="start" x="123.75" y="-615" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">DATETIME</text>
+</g>
+<!-- user_role -->
+<g id="node3" class="node">
+<title>user_role</title>
+<path fill="none" stroke="#64748b" d="M309.38,-896.25C309.38,-896.25 398.38,-896.25 398.38,-896.25 404.38,-896.25 410.38,-902.25 410.38,-908.25 410.38,-908.25 410.38,-949.25 410.38,-949.25 410.38,-955.25 404.38,-961.25 398.38,-961.25 398.38,-961.25 309.38,-961.25 309.38,-961.25 303.38,-961.25 297.38,-955.25 297.38,-949.25 297.38,-949.25 297.38,-908.25 297.38,-908.25 297.38,-902.25 303.38,-896.25 309.38,-896.25"/>
+<polygon fill="#0284c7" stroke="none" points="298.38,-944.5 298.38,-960.25 409.38,-960.25 409.38,-944.5 298.38,-944.5"/>
+<text xml:space="preserve" text-anchor="start" x="333.25" y="-949.7" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00" fill="white">user_role</text>
+<text xml:space="preserve" text-anchor="start" x="301.38" y="-933.95" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00">user_id</text>
+<text xml:space="preserve" text-anchor="start" x="357.62" y="-934.75" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [PK, FK]</text>
+<text xml:space="preserve" text-anchor="start" x="301.38" y="-918.2" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00">role_id</text>
+<text xml:space="preserve" text-anchor="start" x="357.62" y="-919" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [PK, FK]</text>
+<text xml:space="preserve" text-anchor="start" x="301.38" y="-903.25" font-family="Helvetica, Arial, sans-serif" font-size="9.00">assigned_at</text>
+<text xml:space="preserve" text-anchor="start" x="362.88" y="-903.25" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">DATETIME</text>
+</g>
+<!-- users&#45;&gt;user_role -->
+<g id="edge1" class="edge">
+<title>users&#45;&gt;user_role</title>
+<path fill="none" stroke="#334155" d="M167.32,-771.48C211.46,-819.67 258.25,-870.75 258.25,-870.75 258.25,-870.75 270.67,-878.36 286.51,-888.07"/>
+<polygon fill="#334155" stroke="#334155" points="284.95,-889.99 292.19,-891.56 287.51,-885.81 284.95,-889.99"/>
+<text xml:space="preserve" text-anchor="middle" x="217.61" y="-825.74" font-family="Helvetica, Arial, sans-serif" font-size="8.00">1:N</text>
+</g>
+<!-- student_profiles -->
+<g id="node4" class="node">
+<title>student_profiles</title>
+<path fill="none" stroke="#64748b" d="M287.62,-537.88C287.62,-537.88 420.12,-537.88 420.12,-537.88 426.12,-537.88 432.12,-543.88 432.12,-549.88 432.12,-549.88 432.12,-669.62 432.12,-669.62 432.12,-675.62 426.12,-681.62 420.12,-681.62 420.12,-681.62 287.62,-681.62 287.62,-681.62 281.62,-681.62 275.62,-675.62 275.62,-669.62 275.62,-669.62 275.62,-549.88 275.62,-549.88 275.62,-543.88 281.62,-537.88 287.62,-537.88"/>
+<polygon fill="#1e3a8a" stroke="none" points="276.62,-664.88 276.62,-680.62 431.12,-680.62 431.12,-664.88 276.62,-664.88"/>
+<text xml:space="preserve" text-anchor="start" x="319" y="-670.08" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00" fill="white">student_profiles</text>
+<text xml:space="preserve" text-anchor="start" x="279.62" y="-654.33" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00">id</text>
+<text xml:space="preserve" text-anchor="start" x="395.12" y="-655.12" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [PK]</text>
+<text xml:space="preserve" text-anchor="start" x="279.62" y="-639.38" font-family="Helvetica, Arial, sans-serif" font-size="9.00">user_id</text>
+<text xml:space="preserve" text-anchor="start" x="377.12" y="-639.38" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [FK, UQ]</text>
+<text xml:space="preserve" text-anchor="start" x="279.62" y="-623.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00">matric_number</text>
+<text xml:space="preserve" text-anchor="start" x="347.12" y="-623.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">VARCHAR(50) [UQ]</text>
+<text xml:space="preserve" text-anchor="start" x="279.62" y="-607.88" font-family="Helvetica, Arial, sans-serif" font-size="9.00">gender</text>
+<text xml:space="preserve" text-anchor="start" x="383.12" y="-607.88" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">ENUM(m,f)</text>
+<text xml:space="preserve" text-anchor="start" x="279.62" y="-592.12" font-family="Helvetica, Arial, sans-serif" font-size="9.00">level</text>
+<text xml:space="preserve" text-anchor="start" x="413.88" y="-592.12" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT</text>
+<text xml:space="preserve" text-anchor="start" x="279.62" y="-576.38" font-family="Helvetica, Arial, sans-serif" font-size="9.00">department</text>
+<text xml:space="preserve" text-anchor="start" x="362.88" y="-576.38" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">VARCHAR(100)</text>
+<text xml:space="preserve" text-anchor="start" x="279.62" y="-560.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00">fee_cleared</text>
+<text xml:space="preserve" text-anchor="start" x="384.62" y="-560.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">BOOLEAN</text>
+<text xml:space="preserve" text-anchor="start" x="279.62" y="-544.88" font-family="Helvetica, Arial, sans-serif" font-size="9.00">fee_cleared_at</text>
+<text xml:space="preserve" text-anchor="start" x="384.62" y="-544.88" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">DATETIME</text>
+</g>
+<!-- users&#45;&gt;student_profiles -->
+<g id="edge3" class="edge">
+<title>users&#45;&gt;student_profiles</title>
+<path fill="none" stroke="#334155" d="M179.05,-661.45C205.05,-653.72 233.58,-645.23 259.86,-637.41"/>
+<polygon fill="#334155" stroke="#334155" points="260.48,-639.79 266.49,-635.44 259.09,-635.09 260.48,-639.79"/>
+<text xml:space="preserve" text-anchor="middle" x="213.83" y="-641.83" font-family="Helvetica, Arial, sans-serif" font-size="8.00">1:1</text>
+</g>
+<!-- staff_profiles -->
+<g id="node5" class="node">
+<title>staff_profiles</title>
+<path fill="none" stroke="#64748b" d="M278.25,-195.62C278.25,-195.62 429.5,-195.62 429.5,-195.62 435.5,-195.62 441.5,-201.62 441.5,-207.62 441.5,-207.62 441.5,-295.88 441.5,-295.88 441.5,-301.88 435.5,-307.88 429.5,-307.88 429.5,-307.88 278.25,-307.88 278.25,-307.88 272.25,-307.88 266.25,-301.88 266.25,-295.88 266.25,-295.88 266.25,-207.62 266.25,-207.62 266.25,-201.62 272.25,-195.62 278.25,-195.62"/>
+<polygon fill="#1e3a8a" stroke="none" points="267.25,-291.12 267.25,-306.88 440.5,-306.88 440.5,-291.12 267.25,-291.12"/>
+<text xml:space="preserve" text-anchor="start" x="325.38" y="-296.32" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00" fill="white">staff_profiles</text>
+<text xml:space="preserve" text-anchor="start" x="270.25" y="-280.57" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00">id</text>
+<text xml:space="preserve" text-anchor="start" x="404.5" y="-281.38" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [PK]</text>
+<text xml:space="preserve" text-anchor="start" x="270.25" y="-265.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00">user_id</text>
+<text xml:space="preserve" text-anchor="start" x="386.5" y="-265.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [FK, UQ]</text>
+<text xml:space="preserve" text-anchor="start" x="270.25" y="-249.88" font-family="Helvetica, Arial, sans-serif" font-size="9.00">staff_number</text>
+<text xml:space="preserve" text-anchor="start" x="356.5" y="-249.88" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">VARCHAR(50) [UQ]</text>
+<text xml:space="preserve" text-anchor="start" x="270.25" y="-234.12" font-family="Helvetica, Arial, sans-serif" font-size="9.00">unit_id</text>
+<text xml:space="preserve" text-anchor="start" x="377.5" y="-234.12" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [FK, NULL]</text>
+<text xml:space="preserve" text-anchor="start" x="270.25" y="-218.38" font-family="Helvetica, Arial, sans-serif" font-size="9.00">assigned_hostel_id</text>
+<text xml:space="preserve" text-anchor="start" x="377.5" y="-218.38" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [FK, NULL]</text>
+<text xml:space="preserve" text-anchor="start" x="270.25" y="-202.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00">designation</text>
+<text xml:space="preserve" text-anchor="start" x="372.25" y="-202.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">VARCHAR(100)</text>
+</g>
+<!-- users&#45;&gt;staff_profiles -->
+<g id="edge4" class="edge">
+<title>users&#45;&gt;staff_profiles</title>
+<path fill="none" stroke="#334155" d="M130.14,-604.31C179.69,-499.65 258.25,-333.75 258.25,-333.75 258.25,-333.75 266.17,-326.88 277.44,-317.12"/>
+<polygon fill="#334155" stroke="#334155" points="278.78,-319.2 282.46,-312.77 275.57,-315.5 278.78,-319.2"/>
+<text xml:space="preserve" text-anchor="middle" x="194" y="-449.95" font-family="Helvetica, Arial, sans-serif" font-size="8.00">1:1</text>
+</g>
+<!-- audit_logs -->
+<g id="node16" class="node">
+<title>audit_logs</title>
+<path fill="none" stroke="#64748b" d="M300.75,-732.62C300.75,-732.62 407,-732.62 407,-732.62 413,-732.62 419,-738.62 419,-744.62 419,-744.62 419,-832.88 419,-832.88 419,-838.88 413,-844.88 407,-844.88 407,-844.88 300.75,-844.88 300.75,-844.88 294.75,-844.88 288.75,-838.88 288.75,-832.88 288.75,-832.88 288.75,-744.62 288.75,-744.62 288.75,-738.62 294.75,-732.62 300.75,-732.62"/>
+<polygon fill="#475569" stroke="none" points="289.75,-828.12 289.75,-843.88 418,-843.88 418,-828.12 289.75,-828.12"/>
+<text xml:space="preserve" text-anchor="start" x="331.75" y="-833.33" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00" fill="white">audit_logs</text>
+<text xml:space="preserve" text-anchor="start" x="292.75" y="-817.58" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00">id</text>
+<text xml:space="preserve" text-anchor="start" x="382" y="-818.38" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [PK]</text>
+<text xml:space="preserve" text-anchor="start" x="292.75" y="-802.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00">user_id</text>
+<text xml:space="preserve" text-anchor="start" x="355" y="-802.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [FK, NULL]</text>
+<text xml:space="preserve" text-anchor="start" x="292.75" y="-786.88" font-family="Helvetica, Arial, sans-serif" font-size="9.00">action</text>
+<text xml:space="preserve" text-anchor="start" x="349.75" y="-786.88" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">VARCHAR(100)</text>
+<text xml:space="preserve" text-anchor="start" x="292.75" y="-771.12" font-family="Helvetica, Arial, sans-serif" font-size="9.00">entity_name</text>
+<text xml:space="preserve" text-anchor="start" x="355" y="-771.12" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">VARCHAR(50)</text>
+<text xml:space="preserve" text-anchor="start" x="292.75" y="-755.38" font-family="Helvetica, Arial, sans-serif" font-size="9.00">entity_id</text>
+<text xml:space="preserve" text-anchor="start" x="400.75" y="-755.38" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT</text>
+<text xml:space="preserve" text-anchor="start" x="292.75" y="-739.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00">created_at</text>
+<text xml:space="preserve" text-anchor="start" x="371.5" y="-739.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">DATETIME</text>
+</g>
+<!-- users&#45;&gt;audit_logs -->
+<g id="edge18" class="edge">
+<title>users&#45;&gt;audit_logs</title>
+<path fill="none" stroke="#334155" d="M179.05,-721.8C209.49,-733.53 243.37,-746.58 273.08,-758.02"/>
+<polygon fill="#334155" stroke="#334155" points="272.12,-760.27 279.53,-760.5 273.88,-755.7 272.12,-760.27"/>
+<text xml:space="preserve" text-anchor="middle" x="215.19" y="-732.31" font-family="Helvetica, Arial, sans-serif" font-size="8.00">0..1:N</text>
+</g>
+<!-- roles -->
+<g id="node2" class="node">
+<title>roles</title>
+<path fill="none" stroke="#64748b" d="M31.62,-896.25C31.62,-896.25 147.62,-896.25 147.62,-896.25 153.62,-896.25 159.62,-902.25 159.62,-908.25 159.62,-908.25 159.62,-949.25 159.62,-949.25 159.62,-955.25 153.62,-961.25 147.62,-961.25 147.62,-961.25 31.62,-961.25 31.62,-961.25 25.62,-961.25 19.62,-955.25 19.62,-949.25 19.62,-949.25 19.62,-908.25 19.62,-908.25 19.62,-902.25 25.62,-896.25 31.62,-896.25"/>
+<polygon fill="#1e3a8a" stroke="none" points="20.62,-944.5 20.62,-960.25 158.62,-960.25 158.62,-944.5 20.62,-944.5"/>
+<text xml:space="preserve" text-anchor="start" x="78.75" y="-949.7" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00" fill="white">roles</text>
+<text xml:space="preserve" text-anchor="start" x="23.62" y="-933.95" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00">id</text>
+<text xml:space="preserve" text-anchor="start" x="122.62" y="-934.75" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [PK]</text>
+<text xml:space="preserve" text-anchor="start" x="23.62" y="-919" font-family="Helvetica, Arial, sans-serif" font-size="9.00">name</text>
+<text xml:space="preserve" text-anchor="start" x="74.62" y="-919" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">VARCHAR(50) [UQ]</text>
+<text xml:space="preserve" text-anchor="start" x="23.62" y="-903.25" font-family="Helvetica, Arial, sans-serif" font-size="9.00">description</text>
+<text xml:space="preserve" text-anchor="start" x="90.38" y="-903.25" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">VARCHAR(255)</text>
+</g>
+<!-- roles&#45;&gt;user_role -->
+<g id="edge2" class="edge">
+<title>roles&#45;&gt;user_role</title>
+<path fill="none" stroke="#334155" d="M167.54,-928.75C203.5,-928.75 246.06,-928.75 281.32,-928.75"/>
+<polygon fill="#334155" stroke="#334155" points="281.14,-931.2 288.14,-928.75 281.14,-926.3 281.14,-931.2"/>
+<text xml:space="preserve" text-anchor="middle" x="218.05" y="-921.15" font-family="Helvetica, Arial, sans-serif" font-size="8.00">1:N</text>
+</g>
+<!-- allocations -->
+<g id="node11" class="node">
+<title>allocations</title>
+<path fill="none" stroke="#64748b" d="M833,-475.88C833,-475.88 1005.25,-475.88 1005.25,-475.88 1011.25,-475.88 1017.25,-481.88 1017.25,-487.88 1017.25,-487.88 1017.25,-607.62 1017.25,-607.62 1017.25,-613.62 1011.25,-619.62 1005.25,-619.62 1005.25,-619.62 833,-619.62 833,-619.62 827,-619.62 821,-613.62 821,-607.62 821,-607.62 821,-487.88 821,-487.88 821,-481.88 827,-475.88 833,-475.88"/>
+<polygon fill="#7c3aed" stroke="none" points="822,-602.88 822,-618.62 1016.25,-618.62 1016.25,-602.88 822,-602.88"/>
+<text xml:space="preserve" text-anchor="start" x="895.88" y="-608.08" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00" fill="white">allocations</text>
+<text xml:space="preserve" text-anchor="start" x="825" y="-592.33" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00">id</text>
+<text xml:space="preserve" text-anchor="start" x="980.25" y="-593.12" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [PK]</text>
+<text xml:space="preserve" text-anchor="start" x="825" y="-577.38" font-family="Helvetica, Arial, sans-serif" font-size="9.00">student_id</text>
+<text xml:space="preserve" text-anchor="start" x="981" y="-577.38" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [FK]</text>
+<text xml:space="preserve" text-anchor="start" x="825" y="-561.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00">bed_space_id</text>
+<text xml:space="preserve" text-anchor="start" x="981" y="-561.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [FK]</text>
+<text xml:space="preserve" text-anchor="start" x="825" y="-545.88" font-family="Helvetica, Arial, sans-serif" font-size="9.00">session_id</text>
+<text xml:space="preserve" text-anchor="start" x="981" y="-545.88" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [FK]</text>
+<text xml:space="preserve" text-anchor="start" x="825" y="-530.12" font-family="Helvetica, Arial, sans-serif" font-size="9.00">status</text>
+<text xml:space="preserve" text-anchor="start" x="938.25" y="-530.12" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">ENUM(act,rev,exp)</text>
+<text xml:space="preserve" text-anchor="start" x="825" y="-514.38" font-family="Helvetica, Arial, sans-serif" font-size="9.00">active_bed_marker</text>
+<text xml:space="preserve" text-anchor="start" x="927.75" y="-514.38" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#dc2626">INT [UQ Anti&#45;Double]</text>
+<text xml:space="preserve" text-anchor="start" x="825" y="-498.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00">active_student_marker</text>
+<text xml:space="preserve" text-anchor="start" x="924" y="-498.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#dc2626">STR [UQ Anti&#45;Double]</text>
+<text xml:space="preserve" text-anchor="start" x="825" y="-482.88" font-family="Helvetica, Arial, sans-serif" font-size="9.00">allocated_at</text>
+<text xml:space="preserve" text-anchor="start" x="969.75" y="-482.88" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">DATETIME</text>
+</g>
+<!-- student_profiles&#45;&gt;allocations -->
+<g id="edge9" class="edge">
+<title>student_profiles&#45;&gt;allocations</title>
+<path fill="none" stroke="#334155" d="M439.91,-615.63C483.9,-618.67 528.5,-621.75 528.5,-621.75 528.5,-621.75 734,-621.75 734,-621.75 734,-621.75 767.23,-608.4 805.45,-593.03"/>
+<polygon fill="#334155" stroke="#334155" points="806.17,-595.39 811.75,-590.5 804.34,-590.84 806.17,-595.39"/>
+<text xml:space="preserve" text-anchor="middle" x="618.98" y="-614.15" font-family="Helvetica, Arial, sans-serif" font-size="8.00">1:N</text>
+</g>
+<!-- complaints -->
+<g id="node12" class="node">
+<title>complaints</title>
+<path fill="none" stroke="#64748b" d="M548.5,-77.62C548.5,-77.62 714,-77.62 714,-77.62 720,-77.62 726,-83.62 726,-89.62 726,-89.62 726,-303.88 726,-303.88 726,-309.88 720,-315.88 714,-315.88 714,-315.88 548.5,-315.88 548.5,-315.88 542.5,-315.88 536.5,-309.88 536.5,-303.88 536.5,-303.88 536.5,-89.62 536.5,-89.62 536.5,-83.62 542.5,-77.62 548.5,-77.62"/>
+<polygon fill="#b91c1c" stroke="none" points="537.5,-299.12 537.5,-314.88 725,-314.88 725,-299.12 537.5,-299.12"/>
+<text xml:space="preserve" text-anchor="start" x="607.62" y="-304.32" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00" fill="white">complaints</text>
+<text xml:space="preserve" text-anchor="start" x="540.5" y="-288.57" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00">id</text>
+<text xml:space="preserve" text-anchor="start" x="689" y="-289.38" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [PK]</text>
+<text xml:space="preserve" text-anchor="start" x="540.5" y="-273.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00">complaint_code</text>
+<text xml:space="preserve" text-anchor="start" x="641" y="-273.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">VARCHAR(50) [UQ]</text>
+<text xml:space="preserve" text-anchor="start" x="540.5" y="-257.88" font-family="Helvetica, Arial, sans-serif" font-size="9.00">student_id</text>
+<text xml:space="preserve" text-anchor="start" x="689.75" y="-257.88" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [FK]</text>
+<text xml:space="preserve" text-anchor="start" x="540.5" y="-242.12" font-family="Helvetica, Arial, sans-serif" font-size="9.00">room_id</text>
+<text xml:space="preserve" text-anchor="start" x="689.75" y="-242.12" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [FK]</text>
+<text xml:space="preserve" text-anchor="start" x="540.5" y="-226.38" font-family="Helvetica, Arial, sans-serif" font-size="9.00">category</text>
+<text xml:space="preserve" text-anchor="start" x="638" y="-226.38" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">ENUM(plumb,elec...)</text>
+<text xml:space="preserve" text-anchor="start" x="540.5" y="-210.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00">urgency</text>
+<text xml:space="preserve" text-anchor="start" x="636.5" y="-210.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">ENUM(urg,norm,low)</text>
+<text xml:space="preserve" text-anchor="start" x="540.5" y="-194.88" font-family="Helvetica, Arial, sans-serif" font-size="9.00">assigned_unit_id</text>
+<text xml:space="preserve" text-anchor="start" x="689.75" y="-194.88" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [FK]</text>
+<text xml:space="preserve" text-anchor="start" x="540.5" y="-179.12" font-family="Helvetica, Arial, sans-serif" font-size="9.00">assigned_officer_id</text>
+<text xml:space="preserve" text-anchor="start" x="662" y="-179.12" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [FK, NULL]</text>
+<text xml:space="preserve" text-anchor="start" x="540.5" y="-163.38" font-family="Helvetica, Arial, sans-serif" font-size="9.00">status</text>
+<text xml:space="preserve" text-anchor="start" x="626.75" y="-163.38" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">ENUM(op,asg,prog,res)</text>
+<text xml:space="preserve" text-anchor="start" x="540.5" y="-147.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00">escalation_level</text>
+<text xml:space="preserve" text-anchor="start" x="674.75" y="-147.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#dc2626">INT (0, 1, 2)</text>
+<text xml:space="preserve" text-anchor="start" x="540.5" y="-131.88" font-family="Helvetica, Arial, sans-serif" font-size="9.00">submitted_at</text>
+<text xml:space="preserve" text-anchor="start" x="678.5" y="-131.88" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">DATETIME</text>
+<text xml:space="preserve" text-anchor="start" x="540.5" y="-116.12" font-family="Helvetica, Arial, sans-serif" font-size="9.00">deadline_at</text>
+<text xml:space="preserve" text-anchor="start" x="678.5" y="-116.12" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">DATETIME</text>
+<text xml:space="preserve" text-anchor="start" x="540.5" y="-100.38" font-family="Helvetica, Arial, sans-serif" font-size="9.00">resolved_at</text>
+<text xml:space="preserve" text-anchor="start" x="678.5" y="-100.38" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">DATETIME</text>
+<text xml:space="preserve" text-anchor="start" x="540.5" y="-84.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00">feedback_rating</text>
+<text xml:space="preserve" text-anchor="start" x="686" y="-84.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT (1&#45;5)</text>
+</g>
+<!-- student_profiles&#45;&gt;complaints -->
+<g id="edge12" class="edge">
+<title>student_profiles&#45;&gt;complaints</title>
+<path fill="none" stroke="#334155" d="M428.5,-534.28C440.72,-521.75 449.5,-512.75 449.5,-512.75 449.5,-512.75 528.5,-341.75 528.5,-341.75 528.5,-341.75 532.57,-335.95 539.08,-326.68"/>
+<polygon fill="#334155" stroke="#334155" points="541.07,-328.1 543.08,-320.97 537.06,-325.29 541.07,-328.1"/>
+<text xml:space="preserve" text-anchor="middle" x="480.18" y="-424.94" font-family="Helvetica, Arial, sans-serif" font-size="8.00">1:N</text>
+</g>
+<!-- staff_profiles&#45;&gt;complaints -->
+<g id="edge15" class="edge">
+<title>staff_profiles&#45;&gt;complaints</title>
+<path fill="none" stroke="#334155" d="M449.26,-232.9C472.24,-228.31 497.01,-223.36 520.63,-218.64"/>
+<polygon fill="#334155" stroke="#334155" points="521.06,-221.06 527.45,-217.28 520.1,-216.25 521.06,-221.06"/>
+<text xml:space="preserve" text-anchor="middle" x="474.07" y="-218.17" font-family="Helvetica, Arial, sans-serif" font-size="8.00">0..1:N</text>
+</g>
+<!-- maintenance_units -->
+<g id="node6" class="node">
+<title>maintenance_units</title>
+<path fill="none" stroke="#64748b" d="M36.12,-141.5C36.12,-141.5 143.12,-141.5 143.12,-141.5 149.12,-141.5 155.12,-147.5 155.12,-153.5 155.12,-153.5 155.12,-226 155.12,-226 155.12,-232 149.12,-238 143.12,-238 143.12,-238 36.12,-238 36.12,-238 30.12,-238 24.12,-232 24.12,-226 24.12,-226 24.12,-153.5 24.12,-153.5 24.12,-147.5 30.12,-141.5 36.12,-141.5"/>
+<polygon fill="#0f766e" stroke="none" points="25.12,-221.25 25.12,-237 154.12,-237 154.12,-221.25 25.12,-221.25"/>
+<text xml:space="preserve" text-anchor="start" x="48.75" y="-226.45" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00" fill="white">maintenance_units</text>
+<text xml:space="preserve" text-anchor="start" x="28.12" y="-210.7" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00">id</text>
+<text xml:space="preserve" text-anchor="start" x="118.12" y="-211.5" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [PK]</text>
+<text xml:space="preserve" text-anchor="start" x="28.12" y="-195.75" font-family="Helvetica, Arial, sans-serif" font-size="9.00">code</text>
+<text xml:space="preserve" text-anchor="start" x="70.12" y="-195.75" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">VARCHAR(30) [UQ]</text>
+<text xml:space="preserve" text-anchor="start" x="28.12" y="-180" font-family="Helvetica, Arial, sans-serif" font-size="9.00">name</text>
+<text xml:space="preserve" text-anchor="start" x="85.88" y="-180" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">VARCHAR(100)</text>
+<text xml:space="preserve" text-anchor="start" x="28.12" y="-164.25" font-family="Helvetica, Arial, sans-serif" font-size="9.00">email</text>
+<text xml:space="preserve" text-anchor="start" x="85.88" y="-164.25" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">VARCHAR(100)</text>
+<text xml:space="preserve" text-anchor="start" x="28.12" y="-148.5" font-family="Helvetica, Arial, sans-serif" font-size="9.00">is_active</text>
+<text xml:space="preserve" text-anchor="start" x="107.62" y="-148.5" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">BOOLEAN</text>
+</g>
+<!-- maintenance_units&#45;&gt;staff_profiles -->
+<g id="edge5" class="edge">
+<title>maintenance_units&#45;&gt;staff_profiles</title>
+<path fill="none" stroke="#334155" d="M162.98,-206.86C190,-213.24 221.23,-220.63 250.45,-227.53"/>
+<polygon fill="#334155" stroke="#334155" points="249.78,-229.9 257.16,-229.12 250.91,-225.13 249.78,-229.9"/>
+<text xml:space="preserve" text-anchor="middle" x="195.84" y="-209.6" font-family="Helvetica, Arial, sans-serif" font-size="8.00">0..1:N</text>
+</g>
+<!-- maintenance_units&#45;&gt;complaints -->
+<g id="edge14" class="edge">
+<title>maintenance_units&#45;&gt;complaints</title>
+<path fill="none" stroke="#334155" d="M162.69,-181.15C208.12,-175.73 258.25,-169.75 258.25,-169.75 258.25,-169.75 449.5,-169.75 449.5,-169.75 449.5,-169.75 482.55,-174.69 520.38,-180.34"/>
+<polygon fill="#334155" stroke="#334155" points="519.73,-182.72 527.02,-181.33 520.46,-177.87 519.73,-182.72"/>
+<text xml:space="preserve" text-anchor="middle" x="335.21" y="-162.15" font-family="Helvetica, Arial, sans-serif" font-size="8.00">1:N</text>
+</g>
+<!-- hostels -->
+<g id="node7" class="node">
+<title>hostels</title>
+<path fill="none" stroke="#64748b" d="M22.62,-327.62C22.62,-327.62 156.62,-327.62 156.62,-327.62 162.62,-327.62 168.62,-333.62 168.62,-339.62 168.62,-339.62 168.62,-427.88 168.62,-427.88 168.62,-433.88 162.62,-439.88 156.62,-439.88 156.62,-439.88 22.62,-439.88 22.62,-439.88 16.62,-439.88 10.62,-433.88 10.62,-427.88 10.62,-427.88 10.62,-339.62 10.62,-339.62 10.62,-333.62 16.62,-327.62 22.62,-327.62"/>
+<polygon fill="#047857" stroke="none" points="11.62,-423.12 11.62,-438.88 167.62,-438.88 167.62,-423.12 11.62,-423.12"/>
+<text xml:space="preserve" text-anchor="start" x="73.88" y="-428.32" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00" fill="white">hostels</text>
+<text xml:space="preserve" text-anchor="start" x="14.62" y="-412.57" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00">id</text>
+<text xml:space="preserve" text-anchor="start" x="131.62" y="-413.38" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [PK]</text>
+<text xml:space="preserve" text-anchor="start" x="14.62" y="-397.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00">name</text>
+<text xml:space="preserve" text-anchor="start" x="78.38" y="-397.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">VARCHAR(100) [UQ]</text>
+<text xml:space="preserve" text-anchor="start" x="14.62" y="-381.88" font-family="Helvetica, Arial, sans-serif" font-size="9.00">code</text>
+<text xml:space="preserve" text-anchor="start" x="83.62" y="-381.88" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">VARCHAR(20) [UQ]</text>
+<text xml:space="preserve" text-anchor="start" x="14.62" y="-366.12" font-family="Helvetica, Arial, sans-serif" font-size="9.00">gender_target</text>
+<text xml:space="preserve" text-anchor="start" x="137.62" y="-366.12" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">ENUM</text>
+<text xml:space="preserve" text-anchor="start" x="14.62" y="-350.38" font-family="Helvetica, Arial, sans-serif" font-size="9.00">total_capacity</text>
+<text xml:space="preserve" text-anchor="start" x="150.38" y="-350.38" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT</text>
+<text xml:space="preserve" text-anchor="start" x="14.62" y="-334.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00">is_active</text>
+<text xml:space="preserve" text-anchor="start" x="121.12" y="-334.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">BOOLEAN</text>
+</g>
+<!-- hostels&#45;&gt;staff_profiles -->
+<g id="edge6" class="edge">
+<title>hostels&#45;&gt;staff_profiles</title>
+<path fill="none" stroke="#334155" d="M176.5,-340.53C200.32,-328.54 226.42,-315.4 251.06,-303"/>
+<polygon fill="#334155" stroke="#334155" points="252.16,-305.19 257.31,-299.85 249.95,-300.81 252.16,-305.19"/>
+<text xml:space="preserve" text-anchor="middle" x="202.9" y="-314.16" font-family="Helvetica, Arial, sans-serif" font-size="8.00">0..1:N</text>
+</g>
+<!-- rooms -->
+<g id="node8" class="node">
+<title>rooms</title>
+<path fill="none" stroke="#64748b" d="M289.88,-358.75C289.88,-358.75 417.88,-358.75 417.88,-358.75 423.88,-358.75 429.88,-364.75 429.88,-370.75 429.88,-370.75 429.88,-474.75 429.88,-474.75 429.88,-480.75 423.88,-486.75 417.88,-486.75 417.88,-486.75 289.88,-486.75 289.88,-486.75 283.88,-486.75 277.88,-480.75 277.88,-474.75 277.88,-474.75 277.88,-370.75 277.88,-370.75 277.88,-364.75 283.88,-358.75 289.88,-358.75"/>
+<polygon fill="#047857" stroke="none" points="278.88,-470 278.88,-485.75 428.88,-485.75 428.88,-470 278.88,-470"/>
+<text xml:space="preserve" text-anchor="start" x="340" y="-475.2" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00" fill="white">rooms</text>
+<text xml:space="preserve" text-anchor="start" x="281.88" y="-459.45" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00">id</text>
+<text xml:space="preserve" text-anchor="start" x="392.88" y="-460.25" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [PK]</text>
+<text xml:space="preserve" text-anchor="start" x="281.88" y="-444.5" font-family="Helvetica, Arial, sans-serif" font-size="9.00">hostel_id</text>
+<text xml:space="preserve" text-anchor="start" x="393.62" y="-444.5" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [FK]</text>
+<text xml:space="preserve" text-anchor="start" x="281.88" y="-428.75" font-family="Helvetica, Arial, sans-serif" font-size="9.00">room_number</text>
+<text xml:space="preserve" text-anchor="start" x="365.88" y="-428.75" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">VARCHAR(20)</text>
+<text xml:space="preserve" text-anchor="start" x="281.88" y="-413" font-family="Helvetica, Arial, sans-serif" font-size="9.00">floor</text>
+<text xml:space="preserve" text-anchor="start" x="411.62" y="-413" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT</text>
+<text xml:space="preserve" text-anchor="start" x="281.88" y="-397.25" font-family="Helvetica, Arial, sans-serif" font-size="9.00">capacity</text>
+<text xml:space="preserve" text-anchor="start" x="411.62" y="-397.25" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT</text>
+<text xml:space="preserve" text-anchor="start" x="281.88" y="-381.5" font-family="Helvetica, Arial, sans-serif" font-size="9.00">current_occupancy</text>
+<text xml:space="preserve" text-anchor="start" x="411.62" y="-381.5" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT</text>
+<text xml:space="preserve" text-anchor="start" x="281.88" y="-365.75" font-family="Helvetica, Arial, sans-serif" font-size="9.00">is_available</text>
+<text xml:space="preserve" text-anchor="start" x="382.38" y="-365.75" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">BOOLEAN</text>
+</g>
+<!-- hostels&#45;&gt;rooms -->
+<g id="edge7" class="edge">
+<title>hostels&#45;&gt;rooms</title>
+<path fill="none" stroke="#334155" d="M176.5,-396.52C203.82,-400.58 234.14,-405.09 261.82,-409.21"/>
+<polygon fill="#334155" stroke="#334155" points="261.16,-411.59 268.44,-410.19 261.88,-406.74 261.16,-411.59"/>
+<text xml:space="preserve" text-anchor="middle" x="212.78" y="-395.26" font-family="Helvetica, Arial, sans-serif" font-size="8.00">1:N</text>
+</g>
+<!-- bed_spaces -->
+<g id="node9" class="node">
+<title>bed_spaces</title>
+<path fill="none" stroke="#64748b" d="M581.5,-499.5C581.5,-499.5 681,-499.5 681,-499.5 687,-499.5 693,-505.5 693,-511.5 693,-511.5 693,-584 693,-584 693,-590 687,-596 681,-596 681,-596 581.5,-596 581.5,-596 575.5,-596 569.5,-590 569.5,-584 569.5,-584 569.5,-511.5 569.5,-511.5 569.5,-505.5 575.5,-499.5 581.5,-499.5"/>
+<polygon fill="#047857" stroke="none" points="570.5,-579.25 570.5,-595 692,-595 692,-579.25 570.5,-579.25"/>
+<text xml:space="preserve" text-anchor="start" x="605" y="-584.45" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00" fill="white">bed_spaces</text>
+<text xml:space="preserve" text-anchor="start" x="573.5" y="-568.7" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00">id</text>
+<text xml:space="preserve" text-anchor="start" x="656" y="-569.5" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [PK]</text>
+<text xml:space="preserve" text-anchor="start" x="573.5" y="-553.75" font-family="Helvetica, Arial, sans-serif" font-size="9.00">room_id</text>
+<text xml:space="preserve" text-anchor="start" x="656.75" y="-553.75" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [FK]</text>
+<text xml:space="preserve" text-anchor="start" x="573.5" y="-538" font-family="Helvetica, Arial, sans-serif" font-size="9.00">bed_label</text>
+<text xml:space="preserve" text-anchor="start" x="629" y="-538" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">VARCHAR(10)</text>
+<text xml:space="preserve" text-anchor="start" x="573.5" y="-522.25" font-family="Helvetica, Arial, sans-serif" font-size="9.00">is_occupied</text>
+<text xml:space="preserve" text-anchor="start" x="645.5" y="-522.25" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">BOOLEAN</text>
+<text xml:space="preserve" text-anchor="start" x="573.5" y="-506.5" font-family="Helvetica, Arial, sans-serif" font-size="9.00">is_active</text>
+<text xml:space="preserve" text-anchor="start" x="645.5" y="-506.5" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">BOOLEAN</text>
+</g>
+<!-- rooms&#45;&gt;bed_spaces -->
+<g id="edge8" class="edge">
+<title>rooms&#45;&gt;bed_spaces</title>
+<path fill="none" stroke="#334155" d="M437.87,-460.42C474.83,-477.2 518.07,-496.83 554.19,-513.22"/>
+<polygon fill="#334155" stroke="#334155" points="553.02,-515.38 560.4,-516.04 555.04,-510.92 553.02,-515.38"/>
+<text xml:space="preserve" text-anchor="middle" x="489.65" y="-479.22" font-family="Helvetica, Arial, sans-serif" font-size="8.00">1:N</text>
+</g>
+<!-- rooms&#45;&gt;complaints -->
+<g id="edge13" class="edge">
+<title>rooms&#45;&gt;complaints</title>
+<path fill="none" stroke="#334155" d="M437.5,-354.94C464.16,-333.06 494.11,-308.48 522.32,-285.33"/>
+<polygon fill="#334155" stroke="#334155" points="523.66,-287.4 527.52,-281.06 520.55,-283.61 523.66,-287.4"/>
+<text xml:space="preserve" text-anchor="middle" x="473.53" y="-312.54" font-family="Helvetica, Arial, sans-serif" font-size="8.00">1:N</text>
+</g>
+<!-- bed_spaces&#45;&gt;allocations -->
+<g id="edge10" class="edge">
+<title>bed_spaces&#45;&gt;allocations</title>
+<path fill="none" stroke="#334155" d="M700.72,-547.75C731.84,-547.75 769.5,-547.75 804.66,-547.75"/>
+<polygon fill="#334155" stroke="#334155" points="804.55,-550.2 811.55,-547.75 804.55,-545.3 804.55,-550.2"/>
+<text xml:space="preserve" text-anchor="middle" x="746.32" y="-540.15" font-family="Helvetica, Arial, sans-serif" font-size="8.00">1:N</text>
+</g>
+<!-- academic_sessions -->
+<g id="node10" class="node">
+<title>academic_sessions</title>
+<path fill="none" stroke="#64748b" d="M573.62,-367.38C573.62,-367.38 688.88,-367.38 688.88,-367.38 694.88,-367.38 700.88,-373.38 700.88,-379.38 700.88,-379.38 700.88,-436.12 700.88,-436.12 700.88,-442.12 694.88,-448.12 688.88,-448.12 688.88,-448.12 573.62,-448.12 573.62,-448.12 567.62,-448.12 561.62,-442.12 561.62,-436.12 561.62,-436.12 561.62,-379.38 561.62,-379.38 561.62,-373.38 567.62,-367.38 573.62,-367.38"/>
+<polygon fill="#7c3aed" stroke="none" points="562.62,-431.38 562.62,-447.12 699.88,-447.12 699.88,-431.38 562.62,-431.38"/>
+<text xml:space="preserve" text-anchor="start" x="588.12" y="-436.57" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00" fill="white">academic_sessions</text>
+<text xml:space="preserve" text-anchor="start" x="565.62" y="-420.82" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00">id</text>
+<text xml:space="preserve" text-anchor="start" x="663.88" y="-421.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [PK]</text>
+<text xml:space="preserve" text-anchor="start" x="565.62" y="-405.88" font-family="Helvetica, Arial, sans-serif" font-size="9.00">session_name</text>
+<text xml:space="preserve" text-anchor="start" x="636.88" y="-405.88" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">VARCHAR(50)</text>
+<text xml:space="preserve" text-anchor="start" x="565.62" y="-390.12" font-family="Helvetica, Arial, sans-serif" font-size="9.00">semester</text>
+<text xml:space="preserve" text-anchor="start" x="631.62" y="-390.12" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">ENUM(1st, 2nd)</text>
+<text xml:space="preserve" text-anchor="start" x="565.62" y="-374.38" font-family="Helvetica, Arial, sans-serif" font-size="9.00">is_current</text>
+<text xml:space="preserve" text-anchor="start" x="653.38" y="-374.38" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">BOOLEAN</text>
+</g>
+<!-- academic_sessions&#45;&gt;allocations -->
+<g id="edge11" class="edge">
+<title>academic_sessions&#45;&gt;allocations</title>
+<path fill="none" stroke="#334155" d="M708.86,-445.27C738.61,-459.84 773.29,-476.82 805.76,-492.72"/>
+<polygon fill="#334155" stroke="#334155" points="804.36,-494.77 811.73,-495.65 806.52,-490.37 804.36,-494.77"/>
+<text xml:space="preserve" text-anchor="middle" x="750.94" y="-461.4" font-family="Helvetica, Arial, sans-serif" font-size="8.00">1:N</text>
+</g>
+<!-- complaint_history -->
+<g id="node13" class="node">
+<title>complaint_history</title>
+<path fill="none" stroke="#64748b" d="M848,-4C848,-4 990.25,-4 990.25,-4 996.25,-4 1002.25,-10 1002.25,-16 1002.25,-16 1002.25,-151.5 1002.25,-151.5 1002.25,-157.5 996.25,-163.5 990.25,-163.5 990.25,-163.5 848,-163.5 848,-163.5 842,-163.5 836,-157.5 836,-151.5 836,-151.5 836,-16 836,-16 836,-10 842,-4 848,-4"/>
+<polygon fill="#b91c1c" stroke="none" points="837,-146.75 837,-162.5 1001.25,-162.5 1001.25,-146.75 837,-146.75"/>
+<text xml:space="preserve" text-anchor="start" x="880.5" y="-151.95" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00" fill="white">complaint_history</text>
+<text xml:space="preserve" text-anchor="start" x="840" y="-136.2" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00">id</text>
+<text xml:space="preserve" text-anchor="start" x="965.25" y="-137" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [PK]</text>
+<text xml:space="preserve" text-anchor="start" x="840" y="-121.25" font-family="Helvetica, Arial, sans-serif" font-size="9.00">complaint_id</text>
+<text xml:space="preserve" text-anchor="start" x="966" y="-121.25" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [FK]</text>
+<text xml:space="preserve" text-anchor="start" x="840" y="-105.5" font-family="Helvetica, Arial, sans-serif" font-size="9.00">action_type</text>
+<text xml:space="preserve" text-anchor="start" x="971.25" y="-105.5" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">ENUM</text>
+<text xml:space="preserve" text-anchor="start" x="840" y="-89.75" font-family="Helvetica, Arial, sans-serif" font-size="9.00">from_status</text>
+<text xml:space="preserve" text-anchor="start" x="938.25" y="-89.75" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">VARCHAR(50)</text>
+<text xml:space="preserve" text-anchor="start" x="840" y="-74" font-family="Helvetica, Arial, sans-serif" font-size="9.00">to_status</text>
+<text xml:space="preserve" text-anchor="start" x="938.25" y="-74" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">VARCHAR(50)</text>
+<text xml:space="preserve" text-anchor="start" x="840" y="-58.25" font-family="Helvetica, Arial, sans-serif" font-size="9.00">to_escalation_level</text>
+<text xml:space="preserve" text-anchor="start" x="984" y="-58.25" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT</text>
+<text xml:space="preserve" text-anchor="start" x="840" y="-42.5" font-family="Helvetica, Arial, sans-serif" font-size="9.00">performed_by_user_id</text>
+<text xml:space="preserve" text-anchor="start" x="938.25" y="-42.5" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [FK, NULL]</text>
+<text xml:space="preserve" text-anchor="start" x="840" y="-26.75" font-family="Helvetica, Arial, sans-serif" font-size="9.00">notes</text>
+<text xml:space="preserve" text-anchor="start" x="975.75" y="-26.75" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">TEXT</text>
+<text xml:space="preserve" text-anchor="start" x="840" y="-11" font-family="Helvetica, Arial, sans-serif" font-size="9.00">created_at</text>
+<text xml:space="preserve" text-anchor="start" x="954.75" y="-11" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">DATETIME</text>
+</g>
+<!-- complaints&#45;&gt;complaint_history -->
+<g id="edge16" class="edge">
+<title>complaints&#45;&gt;complaint_history</title>
+<path fill="none" stroke="#334155" d="M733.84,-156.59C762.01,-145.46 792.52,-133.4 820.45,-122.36"/>
+<polygon fill="#334155" stroke="#334155" points="821.24,-124.68 826.85,-119.83 819.44,-120.12 821.24,-124.68"/>
+<text xml:space="preserve" text-anchor="middle" x="770.77" y="-131.87" font-family="Helvetica, Arial, sans-serif" font-size="8.00">1:N</text>
+</g>
+<!-- notification_logs -->
+<g id="node14" class="node">
+<title>notification_logs</title>
+<path fill="none" stroke="#64748b" d="M855.12,-214.75C855.12,-214.75 983.12,-214.75 983.12,-214.75 989.12,-214.75 995.12,-220.75 995.12,-226.75 995.12,-226.75 995.12,-330.75 995.12,-330.75 995.12,-336.75 989.12,-342.75 983.12,-342.75 983.12,-342.75 855.12,-342.75 855.12,-342.75 849.12,-342.75 843.12,-336.75 843.12,-330.75 843.12,-330.75 843.12,-226.75 843.12,-226.75 843.12,-220.75 849.12,-214.75 855.12,-214.75"/>
+<polygon fill="#475569" stroke="none" points="844.12,-326 844.12,-341.75 994.12,-341.75 994.12,-326 844.12,-326"/>
+<text xml:space="preserve" text-anchor="start" x="883.88" y="-331.2" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00" fill="white">notification_logs</text>
+<text xml:space="preserve" text-anchor="start" x="847.12" y="-315.45" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00">id</text>
+<text xml:space="preserve" text-anchor="start" x="958.12" y="-316.25" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [PK]</text>
+<text xml:space="preserve" text-anchor="start" x="847.12" y="-300.5" font-family="Helvetica, Arial, sans-serif" font-size="9.00">recipient_email</text>
+<text xml:space="preserve" text-anchor="start" x="925.88" y="-300.5" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">VARCHAR(100)</text>
+<text xml:space="preserve" text-anchor="start" x="847.12" y="-284.75" font-family="Helvetica, Arial, sans-serif" font-size="9.00">recipient_role</text>
+<text xml:space="preserve" text-anchor="start" x="931.12" y="-284.75" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">VARCHAR(50)</text>
+<text xml:space="preserve" text-anchor="start" x="847.12" y="-269" font-family="Helvetica, Arial, sans-serif" font-size="9.00">event_type</text>
+<text xml:space="preserve" text-anchor="start" x="964.12" y="-269" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">ENUM</text>
+<text xml:space="preserve" text-anchor="start" x="847.12" y="-253.25" font-family="Helvetica, Arial, sans-serif" font-size="9.00">complaint_id</text>
+<text xml:space="preserve" text-anchor="start" x="931.12" y="-253.25" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [FK, NULL]</text>
+<text xml:space="preserve" text-anchor="start" x="847.12" y="-237.5" font-family="Helvetica, Arial, sans-serif" font-size="9.00">status</text>
+<text xml:space="preserve" text-anchor="start" x="916.12" y="-237.5" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">ENUM(sent,failed)</text>
+<text xml:space="preserve" text-anchor="start" x="847.12" y="-221.75" font-family="Helvetica, Arial, sans-serif" font-size="9.00">sent_at</text>
+<text xml:space="preserve" text-anchor="start" x="947.62" y="-221.75" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">DATETIME</text>
+</g>
+<!-- complaints&#45;&gt;notification_logs -->
+<g id="edge17" class="edge">
+<title>complaints&#45;&gt;notification_logs</title>
+<path fill="none" stroke="#334155" d="M733.84,-225.89C764.34,-234.64 797.58,-244.17 827.33,-252.71"/>
+<polygon fill="#334155" stroke="#334155" points="826.36,-254.98 833.76,-254.55 827.71,-250.27 826.36,-254.98"/>
+<text xml:space="preserve" text-anchor="middle" x="774.21" y="-231.7" font-family="Helvetica, Arial, sans-serif" font-size="8.00">1:N</text>
+</g>
+<!-- triage_keywords -->
+<g id="node15" class="node">
+<title>triage_keywords</title>
+<path fill="none" stroke="#64748b" d="M33.5,-1012.62C33.5,-1012.62 145.75,-1012.62 145.75,-1012.62 151.75,-1012.62 157.75,-1018.62 157.75,-1024.62 157.75,-1024.62 157.75,-1112.88 157.75,-1112.88 157.75,-1118.88 151.75,-1124.88 145.75,-1124.88 145.75,-1124.88 33.5,-1124.88 33.5,-1124.88 27.5,-1124.88 21.5,-1118.88 21.5,-1112.88 21.5,-1112.88 21.5,-1024.62 21.5,-1024.62 21.5,-1018.62 27.5,-1012.62 33.5,-1012.62"/>
+<polygon fill="#475569" stroke="none" points="22.5,-1108.12 22.5,-1123.88 156.75,-1123.88 156.75,-1108.12 22.5,-1108.12"/>
+<text xml:space="preserve" text-anchor="start" x="54.38" y="-1113.33" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00" fill="white">triage_keywords</text>
+<text xml:space="preserve" text-anchor="start" x="25.5" y="-1097.58" font-family="Helvetica, Arial, sans-serif" font-weight="bold" font-size="9.00">id</text>
+<text xml:space="preserve" text-anchor="start" x="120.75" y="-1098.38" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT [PK]</text>
+<text xml:space="preserve" text-anchor="start" x="25.5" y="-1082.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00">keyword</text>
+<text xml:space="preserve" text-anchor="start" x="67.5" y="-1082.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">VARCHAR(100) [UQ]</text>
+<text xml:space="preserve" text-anchor="start" x="25.5" y="-1066.88" font-family="Helvetica, Arial, sans-serif" font-size="9.00">category</text>
+<text xml:space="preserve" text-anchor="start" x="126.75" y="-1066.88" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">ENUM</text>
+<text xml:space="preserve" text-anchor="start" x="25.5" y="-1051.12" font-family="Helvetica, Arial, sans-serif" font-size="9.00">urgency</text>
+<text xml:space="preserve" text-anchor="start" x="126.75" y="-1051.12" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">ENUM</text>
+<text xml:space="preserve" text-anchor="start" x="25.5" y="-1035.38" font-family="Helvetica, Arial, sans-serif" font-size="9.00">weight</text>
+<text xml:space="preserve" text-anchor="start" x="139.5" y="-1035.38" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">INT</text>
+<text xml:space="preserve" text-anchor="start" x="25.5" y="-1019.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00">is_active</text>
+<text xml:space="preserve" text-anchor="start" x="110.25" y="-1019.62" font-family="Helvetica, Arial, sans-serif" font-size="9.00" fill="#64748b">BOOLEAN</text>
+</g>
+</g>
+</svg>
+
+      </div>
+      <div class="svg-wrapper" id="workflowWrapper" style="display: none;">
+        <svg id="svg-workflow" class="diagram-svg" width="789pt" height="1064pt"
+ viewBox="0.00 0.00 789.00 1064.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(28.8 1035.06)">
+<title>IHMS_Engine_Workflow</title>
+<polygon fill="#ffffff" stroke="none" points="-28.8,28.8 -28.8,-1035.06 760.67,-1035.06 760.67,28.8 -28.8,28.8"/>
+<!-- start -->
+<g id="node1" class="node">
+<title>start</title>
+<ellipse fill="#dbeafe" stroke="#1e40af" cx="499" cy="-985.76" rx="146.55" ry="20.51"/>
+<text xml:space="preserve" text-anchor="middle" x="499" y="-986.76" font-family="Helvetica, Arial, sans-serif" font-size="10.00">Student Lodges Maintenance Complaint</text>
+<text xml:space="preserve" text-anchor="middle" x="499" y="-976.26" font-family="Helvetica, Arial, sans-serif" font-size="10.00">(Description, Room Number, Photos/Notes)</text>
+</g>
+<!-- triage -->
+<g id="node2" class="node">
+<title>triage</title>
+<path fill="#fef3c7" stroke="#d97706" d="M576.38,-914.25C576.38,-914.25 421.62,-914.25 421.62,-914.25 415.62,-914.25 409.62,-908.25 409.62,-902.25 409.62,-902.25 409.62,-890.25 409.62,-890.25 409.62,-884.25 415.62,-878.25 421.62,-878.25 421.62,-878.25 576.38,-878.25 576.38,-878.25 582.38,-878.25 588.38,-884.25 588.38,-890.25 588.38,-890.25 588.38,-902.25 588.38,-902.25 588.38,-908.25 582.38,-914.25 576.38,-914.25"/>
+<text xml:space="preserve" text-anchor="middle" x="499" y="-897.25" font-family="Helvetica, Arial, sans-serif" font-size="10.00">Complaint Triage Engine</text>
+<text xml:space="preserve" text-anchor="middle" x="499" y="-886.75" font-family="Helvetica, Arial, sans-serif" font-size="10.00">(Keyword Matcher / TypeSafe Jev AI)</text>
+</g>
+<!-- start&#45;&gt;triage -->
+<g id="edge1" class="edge">
+<title>start&#45;&gt;triage</title>
+<path fill="none" stroke="#1e3a8a" stroke-width="1.2" d="M499,-964.9C499,-953.44 499,-938.81 499,-926.1"/>
+<polygon fill="#1e3a8a" stroke="#1e3a8a" stroke-width="1.2" points="502.5,-926.48 499,-916.48 495.5,-926.48 502.5,-926.48"/>
+</g>
+<!-- classify -->
+<g id="node3" class="node">
+<title>classify</title>
+<path fill="#fef9c3" stroke="#ca8a04" d="M610.88,-827.25C610.88,-827.25 387.12,-827.25 387.12,-827.25 381.12,-827.25 375.12,-821.25 375.12,-815.25 375.12,-815.25 375.12,-799.75 375.12,-799.75 375.12,-793.75 381.12,-787.75 387.12,-787.75 387.12,-787.75 610.88,-787.75 610.88,-787.75 616.88,-787.75 622.88,-793.75 622.88,-799.75 622.88,-799.75 622.88,-815.25 622.88,-815.25 622.88,-821.25 616.88,-827.25 610.88,-827.25"/>
+<text xml:space="preserve" text-anchor="middle" x="499" y="-813.75" font-family="Helvetica, Arial, sans-serif" font-size="10.00">Assigns Category, Urgency &amp; Maintenance Unit:</text>
+<text xml:space="preserve" text-anchor="middle" x="499" y="-803.25" font-family="Helvetica, Arial, sans-serif" font-size="10.00">* Plumbing | Electrical | Carpentry | Sanitation | Other</text>
+<text xml:space="preserve" text-anchor="middle" x="499" y="-792.75" font-family="Helvetica, Arial, sans-serif" font-size="10.00">* Urgent (24h) | Normal (72h) | Low (7 days)</text>
+</g>
+<!-- triage&#45;&gt;classify -->
+<g id="edge2" class="edge">
+<title>triage&#45;&gt;classify</title>
+<path fill="none" stroke="#1e3a8a" stroke-width="1.2" d="M499,-878.11C499,-867.11 499,-852.5 499,-839.51"/>
+<polygon fill="#1e3a8a" stroke="#1e3a8a" stroke-width="1.2" points="502.5,-839.53 499,-829.53 495.5,-839.53 502.5,-839.53"/>
+</g>
+<!-- deadline -->
+<g id="node4" class="node">
+<title>deadline</title>
+<path fill="#dcfce7" stroke="#16a34a" d="M590.62,-736.75C590.62,-736.75 407.38,-736.75 407.38,-736.75 401.38,-736.75 395.38,-730.75 395.38,-724.75 395.38,-724.75 395.38,-712.75 395.38,-712.75 395.38,-706.75 401.38,-700.75 407.38,-700.75 407.38,-700.75 590.62,-700.75 590.62,-700.75 596.62,-700.75 602.62,-706.75 602.62,-712.75 602.62,-712.75 602.62,-724.75 602.62,-724.75 602.62,-730.75 596.62,-736.75 590.62,-736.75"/>
+<text xml:space="preserve" text-anchor="middle" x="499" y="-719.75" font-family="Helvetica, Arial, sans-serif" font-size="10.00">Compute Exact SLA Resolution Deadline: d</text>
+<text xml:space="preserve" text-anchor="middle" x="499" y="-709.25" font-family="Helvetica, Arial, sans-serif" font-size="10.00">(Table IV Matrix)</text>
+</g>
+<!-- classify&#45;&gt;deadline -->
+<g id="edge3" class="edge">
+<title>classify&#45;&gt;deadline</title>
+<path fill="none" stroke="#1e3a8a" stroke-width="1.2" d="M499,-787.68C499,-776.27 499,-761.49 499,-748.63"/>
+<polygon fill="#1e3a8a" stroke="#1e3a8a" stroke-width="1.2" points="502.5,-748.88 499,-738.88 495.5,-748.88 502.5,-748.88"/>
+</g>
+<!-- dispatch -->
+<g id="node5" class="node">
+<title>dispatch</title>
+<path fill="#e0e7ff" stroke="#4338ca" d="M579,-649.75C579,-649.75 419,-649.75 419,-649.75 413,-649.75 407,-643.75 407,-637.75 407,-637.75 407,-611.75 407,-611.75 407,-605.75 413,-599.75 419,-599.75 419,-599.75 579,-599.75 579,-599.75 585,-599.75 591,-605.75 591,-611.75 591,-611.75 591,-637.75 591,-637.75 591,-643.75 585,-649.75 579,-649.75"/>
+<text xml:space="preserve" text-anchor="middle" x="499" y="-636.25" font-family="Helvetica, Arial, sans-serif" font-size="10.00">Level 0: Assigned to Maintenance Unit</text>
+<text xml:space="preserve" text-anchor="middle" x="499" y="-625.75" font-family="Helvetica, Arial, sans-serif" font-size="10.00">* Status: OPEN / ASSIGNED</text>
+<text xml:space="preserve" text-anchor="middle" x="499" y="-615.25" font-family="Helvetica, Arial, sans-serif" font-size="10.00">* Outbound Email to Unit Head</text>
+<text xml:space="preserve" text-anchor="middle" x="499" y="-604.75" font-family="Helvetica, Arial, sans-serif" font-size="10.00">* History Log Created</text>
+</g>
+<!-- deadline&#45;&gt;dispatch -->
+<g id="edge4" class="edge">
+<title>deadline&#45;&gt;dispatch</title>
+<path fill="none" stroke="#1e3a8a" stroke-width="1.2" d="M499,-700.45C499,-689.53 499,-675.02 499,-661.69"/>
+<polygon fill="#1e3a8a" stroke="#1e3a8a" stroke-width="1.2" points="502.5,-661.74 499,-651.74 495.5,-661.74 502.5,-661.74"/>
+</g>
+<!-- scheduler -->
+<g id="node6" class="node">
+<title>scheduler</title>
+<path fill="#f1f5f9" stroke="#475569" d="M487.15,-546.88C487.15,-546.88 326.85,-521.62 326.85,-521.62 320.93,-520.68 320.93,-518.82 326.85,-517.88 326.85,-517.88 487.15,-492.62 487.15,-492.62 493.07,-491.68 504.93,-491.68 510.85,-492.62 510.85,-492.62 671.15,-517.88 671.15,-517.88 677.07,-518.82 677.07,-520.68 671.15,-521.62 671.15,-521.62 510.85,-546.88 510.85,-546.88 504.93,-547.82 493.07,-547.82 487.15,-546.88"/>
+<text xml:space="preserve" text-anchor="middle" x="499" y="-520.75" font-family="Helvetica, Arial, sans-serif" font-size="10.00">APScheduler Daemon</text>
+<text xml:space="preserve" text-anchor="middle" x="499" y="-510.25" font-family="Helvetica, Arial, sans-serif" font-size="10.00">(Periodic Evaluation Every 15 Minutes)</text>
+</g>
+<!-- dispatch&#45;&gt;scheduler -->
+<g id="edge5" class="edge">
+<title>dispatch&#45;&gt;scheduler</title>
+<path fill="none" stroke="#1e3a8a" stroke-width="1.2" d="M499,-599.34C499,-587.77 499,-573.65 499,-560.59"/>
+<polygon fill="#1e3a8a" stroke="#1e3a8a" stroke-width="1.2" points="502.5,-560.81 499,-550.81 495.5,-560.81 502.5,-560.81"/>
+</g>
+<!-- check_status -->
+<g id="node7" class="node">
+<title>check_status</title>
+<path fill="#f8fafc" stroke="#64748b" d="M310.15,-437.85C310.15,-437.85 152.85,-412.65 152.85,-412.65 146.92,-411.7 146.92,-409.8 152.85,-408.85 152.85,-408.85 310.15,-383.65 310.15,-383.65 316.08,-382.7 327.92,-382.7 333.85,-383.65 333.85,-383.65 491.15,-408.85 491.15,-408.85 497.08,-409.8 497.08,-411.7 491.15,-412.65 491.15,-412.65 333.85,-437.85 333.85,-437.85 327.92,-438.8 316.08,-438.8 310.15,-437.85"/>
+<text xml:space="preserve" text-anchor="middle" x="322" y="-411.75" font-family="Helvetica, Arial, sans-serif" font-size="10.00">Is Complaint Still Open / In Progress?</text>
+<text xml:space="preserve" text-anchor="middle" x="322" y="-401.25" font-family="Helvetica, Arial, sans-serif" font-size="10.00">(Unresolved Status)</text>
+</g>
+<!-- scheduler&#45;&gt;check_status -->
+<g id="edge6" class="edge">
+<title>scheduler&#45;&gt;check_status</title>
+<path fill="none" stroke="#1e3a8a" stroke-width="1.2" d="M461.89,-496.32C434.87,-479.98 398.07,-457.73 368.99,-440.16"/>
+<polygon fill="#1e3a8a" stroke="#1e3a8a" stroke-width="1.2" points="370.98,-437.27 360.61,-435.09 367.36,-443.26 370.98,-437.27"/>
+</g>
+<!-- resolved_flow -->
+<g id="node8" class="node">
+<title>resolved_flow</title>
+<path fill="#d1fae5" stroke="#059669" d="M311.25,-247C311.25,-247 128.75,-247 128.75,-247 122.75,-247 116.75,-241 116.75,-235 116.75,-235 116.75,-209 116.75,-209 116.75,-203 122.75,-197 128.75,-197 128.75,-197 311.25,-197 311.25,-197 317.25,-197 323.25,-203 323.25,-209 323.25,-209 323.25,-235 323.25,-235 323.25,-241 317.25,-247 311.25,-247"/>
+<text xml:space="preserve" text-anchor="middle" x="220" y="-233.5" font-family="Helvetica, Arial, sans-serif" font-size="10.00">Complaint Resolved by Maintenance Officer</text>
+<text xml:space="preserve" text-anchor="middle" x="220" y="-223" font-family="Helvetica, Arial, sans-serif" font-size="10.00">* Timestamp Logged</text>
+<text xml:space="preserve" text-anchor="middle" x="220" y="-212.5" font-family="Helvetica, Arial, sans-serif" font-size="10.00">* Email Confirmation to Student</text>
+<text xml:space="preserve" text-anchor="middle" x="220" y="-202" font-family="Helvetica, Arial, sans-serif" font-size="10.00">* Feedback Rating (1&#45;5 Stars) Captured</text>
+</g>
+<!-- check_status&#45;&gt;resolved_flow -->
+<g id="edge7" class="edge">
+<title>check_status&#45;&gt;resolved_flow</title>
+<path fill="none" stroke="#1e3a8a" stroke-width="1.2" d="M302.36,-384.5C296.07,-375.92 289.3,-366.12 283.75,-356.75 264.62,-324.46 246.59,-285.54 234.62,-258.02"/>
+<polygon fill="#1e3a8a" stroke="#1e3a8a" stroke-width="1.2" points="237.91,-256.82 230.74,-249.02 231.48,-259.59 237.91,-256.82"/>
+<text xml:space="preserve" text-anchor="middle" x="314.88" y="-348.2" font-family="Helvetica, Arial, sans-serif" font-size="9.00">Yes (Resolved)</text>
+</g>
+<!-- eval_elapsed -->
+<g id="node9" class="node">
+<title>eval_elapsed</title>
+<path fill="#fee2e2" stroke="#dc2626" d="M472.38,-322C472.38,-322 305.62,-322 305.62,-322 299.62,-322 293.62,-316 293.62,-310 293.62,-310 293.62,-284 293.62,-284 293.62,-278 299.62,-272 305.62,-272 305.62,-272 472.38,-272 472.38,-272 478.38,-272 484.38,-278 484.38,-284 484.38,-284 484.38,-310 484.38,-310 484.38,-316 478.38,-322 472.38,-322"/>
+<text xml:space="preserve" text-anchor="middle" x="389" y="-308.5" font-family="Helvetica, Arial, sans-serif" font-size="10.00">Compute Elapsed Time t vs Deadline d:</text>
+<text xml:space="preserve" text-anchor="middle" x="389" y="-298" font-family="Helvetica, Arial, sans-serif" font-size="10.00">L = 0 &#160;if &#160;t &lt; d</text>
+<text xml:space="preserve" text-anchor="middle" x="389" y="-287.5" font-family="Helvetica, Arial, sans-serif" font-size="10.00">L = 1 &#160;if &#160;d &lt;= t &lt; 2d</text>
+<text xml:space="preserve" text-anchor="middle" x="389" y="-277" font-family="Helvetica, Arial, sans-serif" font-size="10.00">L = 2 &#160;if &#160;t &gt;= 2d</text>
+</g>
+<!-- check_status&#45;&gt;eval_elapsed -->
+<g id="edge8" class="edge">
+<title>check_status&#45;&gt;eval_elapsed</title>
+<path fill="none" stroke="#1e3a8a" stroke-width="1.2" d="M337.54,-383.83C346.76,-368.45 358.56,-348.78 368.53,-332.15"/>
+<polygon fill="#1e3a8a" stroke="#1e3a8a" stroke-width="1.2" points="371.39,-334.18 373.53,-323.81 365.38,-330.58 371.39,-334.18"/>
+<text xml:space="preserve" text-anchor="middle" x="394.39" y="-348.2" font-family="Helvetica, Arial, sans-serif" font-size="9.00">No (Open/Active)</text>
+</g>
+<!-- analytics -->
+<g id="node13" class="node">
+<title>analytics</title>
+<path fill="#ede9fe" stroke="#6d28d9" d="M383.5,-60.5C383.5,-60.5 142.5,-60.5 142.5,-60.5 136.5,-60.5 130.5,-54.5 130.5,-48.5 130.5,-48.5 130.5,-12 130.5,-12 130.5,-6 136.5,0 142.5,0 142.5,0 383.5,0 383.5,0 389.5,0 395.5,-6 395.5,-12 395.5,-12 395.5,-48.5 395.5,-48.5 395.5,-54.5 389.5,-60.5 383.5,-60.5"/>
+<text xml:space="preserve" text-anchor="middle" x="263" y="-47" font-family="Helvetica, Arial, sans-serif" font-size="10.00">Live Reporting &amp; Analytics Service:</text>
+<text xml:space="preserve" text-anchor="middle" x="263" y="-36.5" font-family="Helvetica, Arial, sans-serif" font-size="10.00">* Occupancy Rates by Block</text>
+<text xml:space="preserve" text-anchor="middle" x="263" y="-26" font-family="Helvetica, Arial, sans-serif" font-size="10.00">* Average Resolution Time (MTTR) by Urgency</text>
+<text xml:space="preserve" text-anchor="middle" x="263" y="-15.5" font-family="Helvetica, Arial, sans-serif" font-size="10.00">* Overdue Breakdown</text>
+<text xml:space="preserve" text-anchor="middle" x="263" y="-5" font-family="Helvetica, Arial, sans-serif" font-size="10.00">* Recurring Fault Rooms (&gt;=3 same category in 30 days)</text>
+</g>
+<!-- resolved_flow&#45;&gt;analytics -->
+<g id="edge15" class="edge">
+<title>resolved_flow&#45;&gt;analytics</title>
+<path fill="none" stroke="#1e3a8a" stroke-width="1.2" d="M225.53,-196.58C232.67,-165.11 245.17,-109.92 253.76,-72.03"/>
+<polygon fill="#1e3a8a" stroke="#1e3a8a" stroke-width="1.2" points="257.09,-73.17 255.89,-62.64 250.26,-71.62 257.09,-73.17"/>
+</g>
+<!-- level0 -->
+<g id="node10" class="node">
+<title>level0</title>
+<path fill="#ecfdf5" stroke="#10b981" d="M719.88,-161.5C719.88,-161.5 592.12,-161.5 592.12,-161.5 586.12,-161.5 580.12,-155.5 580.12,-149.5 580.12,-149.5 580.12,-134 580.12,-134 580.12,-128 586.12,-122 592.12,-122 592.12,-122 719.88,-122 719.88,-122 725.88,-122 731.88,-128 731.88,-134 731.88,-134 731.88,-149.5 731.88,-149.5 731.88,-155.5 725.88,-161.5 719.88,-161.5"/>
+<text xml:space="preserve" text-anchor="middle" x="656" y="-148" font-family="Helvetica, Arial, sans-serif" font-size="10.00">Level 0 (t &lt; d)</text>
+<text xml:space="preserve" text-anchor="middle" x="656" y="-137.5" font-family="Helvetica, Arial, sans-serif" font-size="10.00">Within SLA Deadline</text>
+<text xml:space="preserve" text-anchor="middle" x="656" y="-127" font-family="Helvetica, Arial, sans-serif" font-size="10.00">Normal Unit Processing Queue</text>
+</g>
+<!-- eval_elapsed&#45;&gt;level0 -->
+<g id="edge9" class="edge">
+<title>eval_elapsed&#45;&gt;level0</title>
+<path fill="none" stroke="#1e3a8a" stroke-width="1.2" d="M431.6,-271.55C481.22,-243.07 562.75,-196.27 612.68,-167.62"/>
+<polygon fill="#1e3a8a" stroke="#1e3a8a" stroke-width="1.2" points="614.32,-170.71 621.25,-162.69 610.84,-164.64 614.32,-170.71"/>
+<text xml:space="preserve" text-anchor="middle" x="562.89" y="-218.32" font-family="Helvetica, Arial, sans-serif" font-size="9.00">t &lt; d</text>
+</g>
+<!-- level1 -->
+<g id="node11" class="node">
+<title>level1</title>
+<path fill="#ffedd5" stroke="#ea580c" d="M519,-166.75C519,-166.75 347,-166.75 347,-166.75 341,-166.75 335,-160.75 335,-154.75 335,-154.75 335,-128.75 335,-128.75 335,-122.75 341,-116.75 347,-116.75 347,-116.75 519,-116.75 519,-116.75 525,-116.75 531,-122.75 531,-128.75 531,-128.75 531,-154.75 531,-154.75 531,-160.75 525,-166.75 519,-166.75"/>
+<text xml:space="preserve" text-anchor="middle" x="433" y="-153.25" font-family="Helvetica, Arial, sans-serif" font-size="10.00">Level 1 Escalation (d &lt;= t &lt; 2d)</text>
+<text xml:space="preserve" text-anchor="middle" x="433" y="-142.75" font-family="Helvetica, Arial, sans-serif" font-size="10.00">* Flagged OVERDUE</text>
+<text xml:space="preserve" text-anchor="middle" x="433" y="-132.25" font-family="Helvetica, Arial, sans-serif" font-size="10.00">* Automated SMTP Email to Hall Warden</text>
+<text xml:space="preserve" text-anchor="middle" x="433" y="-121.75" font-family="Helvetica, Arial, sans-serif" font-size="10.00">* Audit History Entry: L1 Alert</text>
+</g>
+<!-- eval_elapsed&#45;&gt;level1 -->
+<g id="edge10" class="edge">
+<title>eval_elapsed&#45;&gt;level1</title>
+<path fill="none" stroke="#1e3a8a" stroke-width="1.2" d="M395.97,-271.72C403.19,-246.57 414.55,-207.02 422.78,-178.34"/>
+<polygon fill="#1e3a8a" stroke="#1e3a8a" stroke-width="1.2" points="426.09,-179.5 425.49,-168.92 419.36,-177.56 426.09,-179.5"/>
+<text xml:space="preserve" text-anchor="middle" x="437.61" y="-218.32" font-family="Helvetica, Arial, sans-serif" font-size="9.00">d &lt;= t &lt; 2d</text>
+</g>
+<!-- level2 -->
+<g id="node12" class="node">
+<title>level2</title>
+<path fill="#fee2e2" stroke="#b91c1c" d="M196,-172C196,-172 12,-172 12,-172 6,-172 0,-166 0,-160 0,-160 0,-123.5 0,-123.5 0,-117.5 6,-111.5 12,-111.5 12,-111.5 196,-111.5 196,-111.5 202,-111.5 208,-117.5 208,-123.5 208,-123.5 208,-160 208,-160 208,-166 202,-172 196,-172"/>
+<text xml:space="preserve" text-anchor="middle" x="104" y="-158.5" font-family="Helvetica, Arial, sans-serif" font-size="10.00">Level 2 Escalation (t &gt;= 2d)</text>
+<text xml:space="preserve" text-anchor="middle" x="104" y="-148" font-family="Helvetica, Arial, sans-serif" font-size="10.00">* Severe Critical Breach Flagged</text>
+<text xml:space="preserve" text-anchor="middle" x="104" y="-137.5" font-family="Helvetica, Arial, sans-serif" font-size="10.00">* Automated SMTP Email to Student Affairs</text>
+<text xml:space="preserve" text-anchor="middle" x="104" y="-127" font-family="Helvetica, Arial, sans-serif" font-size="10.00">* High&#45;Priority Alert on Admin Dashboard</text>
+<text xml:space="preserve" text-anchor="middle" x="104" y="-116.5" font-family="Helvetica, Arial, sans-serif" font-size="10.00">* Audit History Entry: L2 Alert</text>
+</g>
+<!-- eval_elapsed&#45;&gt;level2 -->
+<g id="edge11" class="edge">
+<title>eval_elapsed&#45;&gt;level2</title>
+<path fill="none" stroke="#1e3a8a" stroke-width="1.2" d="M375.71,-271.55C361.13,-245.56 337.93,-206.86 324,-197 293.65,-175.52 255.72,-162.51 219.94,-154.64"/>
+<polygon fill="#1e3a8a" stroke="#1e3a8a" stroke-width="1.2" points="220.69,-151.22 210.19,-152.63 219.28,-158.08 220.69,-151.22"/>
+<text xml:space="preserve" text-anchor="middle" x="375.13" y="-218.32" font-family="Helvetica, Arial, sans-serif" font-size="9.00">t &gt;= 2d</text>
+</g>
+<!-- level0&#45;&gt;scheduler -->
+<g id="edge14" class="edge">
+<title>level0&#45;&gt;scheduler</title>
+<path fill="none" stroke="#1e3a8a" stroke-width="1.2" d="M656.2,-161.89C655.96,-200.35 652.1,-289.1 624,-356.75 602.95,-407.43 561.79,-455.93 532.45,-486.43"/>
+<polygon fill="#1e3a8a" stroke="#1e3a8a" stroke-width="1.2" points="530.28,-483.65 525.79,-493.25 535.28,-488.55 530.28,-483.65"/>
+<text xml:space="preserve" text-anchor="middle" x="661.79" y="-348.2" font-family="Helvetica, Arial, sans-serif" font-size="9.00">Wait next interval</text>
+</g>
+<!-- level1&#45;&gt;scheduler -->
+<g id="edge12" class="edge">
+<title>level1&#45;&gt;scheduler</title>
+<path fill="none" stroke="#1e3a8a" stroke-width="1.2" d="M503.55,-167.2C516.08,-174.78 527.51,-184.54 535,-197 590.65,-289.64 539.5,-333.28 521,-439.75 518.65,-453.28 514.95,-467.83 511.24,-480.71"/>
+<polygon fill="#1e3a8a" stroke="#1e3a8a" stroke-width="1.2" points="507.9,-479.67 508.4,-490.26 514.61,-481.67 507.9,-479.67"/>
+<text xml:space="preserve" text-anchor="middle" x="580.67" y="-348.2" font-family="Helvetica, Arial, sans-serif" font-size="9.00">Wait next interval</text>
+</g>
+<!-- level1&#45;&gt;analytics -->
+<g id="edge16" class="edge">
+<title>level1&#45;&gt;analytics</title>
+<path fill="none" stroke="#1e3a8a" stroke-width="1.2" d="M395.27,-116.45C372.82,-101.99 343.91,-83.37 318.85,-67.23"/>
+<polygon fill="#1e3a8a" stroke="#1e3a8a" stroke-width="1.2" points="320.93,-64.4 310.63,-61.93 317.14,-70.29 320.93,-64.4"/>
+</g>
+<!-- level2&#45;&gt;scheduler -->
+<g id="edge13" class="edge">
+<title>level2&#45;&gt;scheduler</title>
+<path fill="none" stroke="#1e3a8a" stroke-width="1.2" d="M95.43,-172.38C80.38,-231.27 56.71,-363.88 123,-439.75 155.05,-476.43 272.93,-496.97 368.26,-507.85"/>
+<polygon fill="#1e3a8a" stroke="#1e3a8a" stroke-width="1.2" points="367.64,-511.3 377.96,-508.93 368.41,-504.35 367.64,-511.3"/>
+<text xml:space="preserve" text-anchor="middle" x="118.67" y="-348.2" font-family="Helvetica, Arial, sans-serif" font-size="9.00">Wait next interval</text>
+</g>
+<!-- level2&#45;&gt;analytics -->
+<g id="edge17" class="edge">
+<title>level2&#45;&gt;analytics</title>
+<path fill="none" stroke="#1e3a8a" stroke-width="1.2" d="M147.03,-111.12C166.56,-97.67 189.84,-81.63 210.4,-67.47"/>
+<polygon fill="#1e3a8a" stroke="#1e3a8a" stroke-width="1.2" points="212.19,-70.49 218.44,-61.94 208.22,-64.73 212.19,-70.49"/>
+</g>
+</g>
+</svg>
+
+      </div>
+    </div>
+
+    <div class="legend" id="erdLegend">
+      <div class="legend-item"><span class="dot" style="background: #1E3A8A;"></span> Users & Profiles</div>
+      <div class="legend-item"><span class="dot" style="background: #047857;"></span> Hostels & Beds</div>
+      <div class="legend-item"><span class="dot" style="background: #7C3AED;"></span> Allocations</div>
+      <div class="legend-item"><span class="dot" style="background: #B91C1C;"></span> Complaints & Triage</div>
+      <div class="legend-item"><span class="dot" style="background: #0F766E;"></span> Maintenance Units</div>
+      <div class="legend-item"><span class="dot" style="background: #475569;"></span> Audit & SMTP Logs</div>
+    </div>
+  </main>
+
+  <script>
+    const tables = [
+      { name: "users", cols: 10 },
+      { name: "roles", cols: 4 },
+      { name: "user_role", cols: 3 },
+      { name: "student_profiles", cols: 13 },
+      { name: "staff_profiles", cols: 9 },
+      { name: "maintenance_units", cols: 7 },
+      { name: "hostels", cols: 9 },
+      { name: "rooms", cols: 8 },
+      { name: "bed_spaces", cols: 6 },
+      { name: "academic_sessions", cols: 7 },
+      { name: "allocations", cols: 13 },
+      { name: "complaints", cols: 22 },
+      { name: "complaint_history", cols: 10 },
+      { name: "notification_logs", cols: 11 },
+      { name: "triage_keywords", cols: 7 },
+      { name: "audit_logs", cols: 9 }
+    ];
+
+    const tableListEl = document.getElementById("tableList");
+    const searchInput = document.getElementById("searchInput");
+
+    function renderList(filter = "") {
+      tableListEl.innerHTML = "";
+      tables.filter(t => t.name.toLowerCase().includes(filter.toLowerCase())).forEach(t => {
+        const item = document.createElement("div");
+        item.className = "table-item";
+        item.dataset.table = t.name;
+        item.innerHTML = `
+          <span>${t.name}</span>
+          <span class="col-count">${t.cols} cols</span>
+        `;
+        item.onclick = () => focusTable(t.name);
+        tableListEl.appendChild(item);
+      });
+    }
+    renderList();
+
+    searchInput.addEventListener("input", (e) => renderList(e.target.value));
+
+    // Pan & Zoom Logic
+    const stage = document.getElementById("canvas-stage");
+    const viewport = document.getElementById("viewport");
+    let scale = 0.55;
+    let posX = 40;
+    let posY = 20;
+    let isDragging = false;
+    let startX, startY;
+
+    function applyTransform() {
+      stage.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
+    }
+    applyTransform();
+
+    viewport.addEventListener("mousedown", (e) => {
+      if (e.target.closest(".toolbar") || e.target.closest(".legend")) return;
+      isDragging = true;
+      startX = e.clientX - posX;
+      startY = e.clientY - posY;
+    });
+
+    window.addEventListener("mousemove", (e) => {
+      if (!isDragging) return;
+      posX = e.clientX - startX;
+      posY = e.clientY - startY;
+      applyTransform();
+    });
+
+    window.addEventListener("mouseup", () => { isDragging = false; });
+
+    viewport.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+      const newScale = Math.min(Math.max(0.15, scale * zoomFactor), 3.0);
+      
+      const rect = viewport.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      posX = mouseX - (mouseX - posX) * (newScale / scale);
+      posY = mouseY - (mouseY - posY) * (newScale / scale);
+      scale = newScale;
+      applyTransform();
+    });
+
+    document.getElementById("btnZoomIn").onclick = () => {
+      scale = Math.min(3.0, scale * 1.25);
+      applyTransform();
+    };
+    document.getElementById("btnZoomOut").onclick = () => {
+      scale = Math.max(0.15, scale * 0.8);
+      applyTransform();
+    };
+    document.getElementById("btnReset").onclick = () => {
+      scale = 0.55;
+      posX = 40;
+      posY = 20;
+      applyTransform();
+      clearHighlight();
+    };
+
+    // Switch between ERD and Workflow
+    let activeView = "erd";
+    const erdWrapper = document.getElementById("erdWrapper");
+    const workflowWrapper = document.getElementById("workflowWrapper");
+    const toggleBtn = document.getElementById("btnToggleView");
+    const legendEl = document.getElementById("erdLegend");
+
+    toggleBtn.onclick = () => {
+      if (activeView === "erd") {
+        erdWrapper.style.display = "none";
+        workflowWrapper.style.display = "inline-block";
+        activeView = "workflow";
+        toggleBtn.innerHTML = "👁️ Switch: Relational ERD";
+        legendEl.style.display = "none";
+        scale = 0.85;
+        posX = 80;
+        posY = 40;
+      }} else {
+        erdWrapper.style.display = "inline-block";
+        workflowWrapper.style.display = "none";
+        activeView = "erd";
+        toggleBtn.innerHTML = "👁️ Switch: Workflow Engine";
+        legendEl.style.display = "flex";
+        scale = 0.55;
+        posX = 40;
+        posY = 20;
+      }
+      applyTransform();
+    };
+
+    // Focus and highlight table node
+    function clearHighlight() {
+      document.querySelectorAll(".highlight-table").forEach(el => el.classList.remove("highlight-table"));
+      document.querySelectorAll(".table-item").forEach(el => el.classList.remove("active"));
+    }
+
+    function focusTable(tableName) {
+      clearHighlight();
+      
+      const itemEl = document.querySelector(`.table-item[data-table="${tableName}"]`);
+      if (itemEl) itemEl.classList.add("active");
+
+      if (activeView !== "erd") {
+        toggleBtn.click();
+      }
+
+      // Find SVG node by title text
+      const titles = document.querySelectorAll("#svg-erd g.node title");
+      for (const t of titles) {
+        if (t.textContent.trim() === tableName) {
+          const nodeG = t.parentElement;
+          nodeG.classList.add("highlight-table");
+          
+          // Center on node
+          const bbox = nodeG.getBBox();
+          const vpRect = viewport.getBoundingClientRect();
+          scale = 1.0;
+          posX = (vpRect.width / 2) - (bbox.x + bbox.width / 2) - 40;
+          posY = (vpRect.height / 2) - (bbox.y + bbox.height / 2) - 40;
+          applyTransform();
+          break;
+        }
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,248 @@
+
+digraph IHMS_ERD {
+    graph [rankdir=LR, splines=polyline, nodesep=0.6, ranksep=1.1, bgcolor="#FFFFFF", pad="0.4"];
+    node [shape=none, fontname="Helvetica, Arial, sans-serif", fontsize=9];
+    edge [fontname="Helvetica, Arial, sans-serif", fontsize=8, color="#334155", arrowsize=0.7];
+
+    // USERS
+    users [label=<
+        <table border="1" cellborder="0" cellspacing="0" cellpadding="3" style="rounded" color="#64748B">
+            <tr><td bgcolor="#1E3A8A" colspan="2"><font color="white"><b>users</b></font></td></tr>
+            <tr><td align="left"><b>id</b></td><td align="right"><font color="#64748B">INT [PK]</font></td></tr>
+            <tr><td align="left">username</td><td align="right"><font color="#64748B">VARCHAR(50) [UQ]</font></td></tr>
+            <tr><td align="left">email</td><td align="right"><font color="#64748B">VARCHAR(100) [UQ]</font></td></tr>
+            <tr><td align="left">password</td><td align="right"><font color="#64748B">VARCHAR(255)</font></td></tr>
+            <tr><td align="left">first_name</td><td align="right"><font color="#64748B">VARCHAR(50)</font></td></tr>
+            <tr><td align="left">last_name</td><td align="right"><font color="#64748B">VARCHAR(50)</font></td></tr>
+            <tr><td align="left">phone_number</td><td align="right"><font color="#64748B">VARCHAR(20)</font></td></tr>
+            <tr><td align="left">is_active</td><td align="right"><font color="#64748B">BOOLEAN</font></td></tr>
+            <tr><td align="left">created_at</td><td align="right"><font color="#64748B">DATETIME</font></td></tr>
+        </table>
+    >];
+
+    // ROLES
+    roles [label=<
+        <table border="1" cellborder="0" cellspacing="0" cellpadding="3" style="rounded" color="#64748B">
+            <tr><td bgcolor="#1E3A8A" colspan="2"><font color="white"><b>roles</b></font></td></tr>
+            <tr><td align="left"><b>id</b></td><td align="right"><font color="#64748B">INT [PK]</font></td></tr>
+            <tr><td align="left">name</td><td align="right"><font color="#64748B">VARCHAR(50) [UQ]</font></td></tr>
+            <tr><td align="left">description</td><td align="right"><font color="#64748B">VARCHAR(255)</font></td></tr>
+        </table>
+    >];
+
+    // USER_ROLE
+    user_role [label=<
+        <table border="1" cellborder="0" cellspacing="0" cellpadding="3" style="rounded" color="#64748B">
+            <tr><td bgcolor="#0284C7" colspan="2"><font color="white"><b>user_role</b></font></td></tr>
+            <tr><td align="left"><b>user_id</b></td><td align="right"><font color="#64748B">INT [PK, FK]</font></td></tr>
+            <tr><td align="left"><b>role_id</b></td><td align="right"><font color="#64748B">INT [PK, FK]</font></td></tr>
+            <tr><td align="left">assigned_at</td><td align="right"><font color="#64748B">DATETIME</font></td></tr>
+        </table>
+    >];
+
+    // STUDENT_PROFILES
+    student_profiles [label=<
+        <table border="1" cellborder="0" cellspacing="0" cellpadding="3" style="rounded" color="#64748B">
+            <tr><td bgcolor="#1E3A8A" colspan="2"><font color="white"><b>student_profiles</b></font></td></tr>
+            <tr><td align="left"><b>id</b></td><td align="right"><font color="#64748B">INT [PK]</font></td></tr>
+            <tr><td align="left">user_id</td><td align="right"><font color="#64748B">INT [FK, UQ]</font></td></tr>
+            <tr><td align="left">matric_number</td><td align="right"><font color="#64748B">VARCHAR(50) [UQ]</font></td></tr>
+            <tr><td align="left">gender</td><td align="right"><font color="#64748B">ENUM(m,f)</font></td></tr>
+            <tr><td align="left">level</td><td align="right"><font color="#64748B">INT</font></td></tr>
+            <tr><td align="left">department</td><td align="right"><font color="#64748B">VARCHAR(100)</font></td></tr>
+            <tr><td align="left">fee_cleared</td><td align="right"><font color="#64748B">BOOLEAN</font></td></tr>
+            <tr><td align="left">fee_cleared_at</td><td align="right"><font color="#64748B">DATETIME</font></td></tr>
+        </table>
+    >];
+
+    // STAFF_PROFILES
+    staff_profiles [label=<
+        <table border="1" cellborder="0" cellspacing="0" cellpadding="3" style="rounded" color="#64748B">
+            <tr><td bgcolor="#1E3A8A" colspan="2"><font color="white"><b>staff_profiles</b></font></td></tr>
+            <tr><td align="left"><b>id</b></td><td align="right"><font color="#64748B">INT [PK]</font></td></tr>
+            <tr><td align="left">user_id</td><td align="right"><font color="#64748B">INT [FK, UQ]</font></td></tr>
+            <tr><td align="left">staff_number</td><td align="right"><font color="#64748B">VARCHAR(50) [UQ]</font></td></tr>
+            <tr><td align="left">unit_id</td><td align="right"><font color="#64748B">INT [FK, NULL]</font></td></tr>
+            <tr><td align="left">assigned_hostel_id</td><td align="right"><font color="#64748B">INT [FK, NULL]</font></td></tr>
+            <tr><td align="left">designation</td><td align="right"><font color="#64748B">VARCHAR(100)</font></td></tr>
+        </table>
+    >];
+
+    // MAINTENANCE_UNITS
+    maintenance_units [label=<
+        <table border="1" cellborder="0" cellspacing="0" cellpadding="3" style="rounded" color="#64748B">
+            <tr><td bgcolor="#0F766E" colspan="2"><font color="white"><b>maintenance_units</b></font></td></tr>
+            <tr><td align="left"><b>id</b></td><td align="right"><font color="#64748B">INT [PK]</font></td></tr>
+            <tr><td align="left">code</td><td align="right"><font color="#64748B">VARCHAR(30) [UQ]</font></td></tr>
+            <tr><td align="left">name</td><td align="right"><font color="#64748B">VARCHAR(100)</font></td></tr>
+            <tr><td align="left">email</td><td align="right"><font color="#64748B">VARCHAR(100)</font></td></tr>
+            <tr><td align="left">is_active</td><td align="right"><font color="#64748B">BOOLEAN</font></td></tr>
+        </table>
+    >];
+
+    // HOSTELS
+    hostels [label=<
+        <table border="1" cellborder="0" cellspacing="0" cellpadding="3" style="rounded" color="#64748B">
+            <tr><td bgcolor="#047857" colspan="2"><font color="white"><b>hostels</b></font></td></tr>
+            <tr><td align="left"><b>id</b></td><td align="right"><font color="#64748B">INT [PK]</font></td></tr>
+            <tr><td align="left">name</td><td align="right"><font color="#64748B">VARCHAR(100) [UQ]</font></td></tr>
+            <tr><td align="left">code</td><td align="right"><font color="#64748B">VARCHAR(20) [UQ]</font></td></tr>
+            <tr><td align="left">gender_target</td><td align="right"><font color="#64748B">ENUM</font></td></tr>
+            <tr><td align="left">total_capacity</td><td align="right"><font color="#64748B">INT</font></td></tr>
+            <tr><td align="left">is_active</td><td align="right"><font color="#64748B">BOOLEAN</font></td></tr>
+        </table>
+    >];
+
+    // ROOMS
+    rooms [label=<
+        <table border="1" cellborder="0" cellspacing="0" cellpadding="3" style="rounded" color="#64748B">
+            <tr><td bgcolor="#047857" colspan="2"><font color="white"><b>rooms</b></font></td></tr>
+            <tr><td align="left"><b>id</b></td><td align="right"><font color="#64748B">INT [PK]</font></td></tr>
+            <tr><td align="left">hostel_id</td><td align="right"><font color="#64748B">INT [FK]</font></td></tr>
+            <tr><td align="left">room_number</td><td align="right"><font color="#64748B">VARCHAR(20)</font></td></tr>
+            <tr><td align="left">floor</td><td align="right"><font color="#64748B">INT</font></td></tr>
+            <tr><td align="left">capacity</td><td align="right"><font color="#64748B">INT</font></td></tr>
+            <tr><td align="left">current_occupancy</td><td align="right"><font color="#64748B">INT</font></td></tr>
+            <tr><td align="left">is_available</td><td align="right"><font color="#64748B">BOOLEAN</font></td></tr>
+        </table>
+    >];
+
+    // BED_SPACES
+    bed_spaces [label=<
+        <table border="1" cellborder="0" cellspacing="0" cellpadding="3" style="rounded" color="#64748B">
+            <tr><td bgcolor="#047857" colspan="2"><font color="white"><b>bed_spaces</b></font></td></tr>
+            <tr><td align="left"><b>id</b></td><td align="right"><font color="#64748B">INT [PK]</font></td></tr>
+            <tr><td align="left">room_id</td><td align="right"><font color="#64748B">INT [FK]</font></td></tr>
+            <tr><td align="left">bed_label</td><td align="right"><font color="#64748B">VARCHAR(10)</font></td></tr>
+            <tr><td align="left">is_occupied</td><td align="right"><font color="#64748B">BOOLEAN</font></td></tr>
+            <tr><td align="left">is_active</td><td align="right"><font color="#64748B">BOOLEAN</font></td></tr>
+        </table>
+    >];
+
+    // ACADEMIC_SESSIONS
+    academic_sessions [label=<
+        <table border="1" cellborder="0" cellspacing="0" cellpadding="3" style="rounded" color="#64748B">
+            <tr><td bgcolor="#7C3AED" colspan="2"><font color="white"><b>academic_sessions</b></font></td></tr>
+            <tr><td align="left"><b>id</b></td><td align="right"><font color="#64748B">INT [PK]</font></td></tr>
+            <tr><td align="left">session_name</td><td align="right"><font color="#64748B">VARCHAR(50)</font></td></tr>
+            <tr><td align="left">semester</td><td align="right"><font color="#64748B">ENUM(1st, 2nd)</font></td></tr>
+            <tr><td align="left">is_current</td><td align="right"><font color="#64748B">BOOLEAN</font></td></tr>
+        </table>
+    >];
+
+    // ALLOCATIONS
+    allocations [label=<
+        <table border="1" cellborder="0" cellspacing="0" cellpadding="3" style="rounded" color="#64748B">
+            <tr><td bgcolor="#7C3AED" colspan="2"><font color="white"><b>allocations</b></font></td></tr>
+            <tr><td align="left"><b>id</b></td><td align="right"><font color="#64748B">INT [PK]</font></td></tr>
+            <tr><td align="left">student_id</td><td align="right"><font color="#64748B">INT [FK]</font></td></tr>
+            <tr><td align="left">bed_space_id</td><td align="right"><font color="#64748B">INT [FK]</font></td></tr>
+            <tr><td align="left">session_id</td><td align="right"><font color="#64748B">INT [FK]</font></td></tr>
+            <tr><td align="left">status</td><td align="right"><font color="#64748B">ENUM(act,rev,exp)</font></td></tr>
+            <tr><td align="left">active_bed_marker</td><td align="right"><font color="#DC2626">INT [UQ Anti-Double]</font></td></tr>
+            <tr><td align="left">active_student_marker</td><td align="right"><font color="#DC2626">STR [UQ Anti-Double]</font></td></tr>
+            <tr><td align="left">allocated_at</td><td align="right"><font color="#64748B">DATETIME</font></td></tr>
+        </table>
+    >];
+
+    // COMPLAINTS
+    complaints [label=<
+        <table border="1" cellborder="0" cellspacing="0" cellpadding="3" style="rounded" color="#64748B">
+            <tr><td bgcolor="#B91C1C" colspan="2"><font color="white"><b>complaints</b></font></td></tr>
+            <tr><td align="left"><b>id</b></td><td align="right"><font color="#64748B">INT [PK]</font></td></tr>
+            <tr><td align="left">complaint_code</td><td align="right"><font color="#64748B">VARCHAR(50) [UQ]</font></td></tr>
+            <tr><td align="left">student_id</td><td align="right"><font color="#64748B">INT [FK]</font></td></tr>
+            <tr><td align="left">room_id</td><td align="right"><font color="#64748B">INT [FK]</font></td></tr>
+            <tr><td align="left">category</td><td align="right"><font color="#64748B">ENUM(plumb,elec...)</font></td></tr>
+            <tr><td align="left">urgency</td><td align="right"><font color="#64748B">ENUM(urg,norm,low)</font></td></tr>
+            <tr><td align="left">assigned_unit_id</td><td align="right"><font color="#64748B">INT [FK]</font></td></tr>
+            <tr><td align="left">assigned_officer_id</td><td align="right"><font color="#64748B">INT [FK, NULL]</font></td></tr>
+            <tr><td align="left">status</td><td align="right"><font color="#64748B">ENUM(op,asg,prog,res)</font></td></tr>
+            <tr><td align="left">escalation_level</td><td align="right"><font color="#DC2626">INT (0, 1, 2)</font></td></tr>
+            <tr><td align="left">submitted_at</td><td align="right"><font color="#64748B">DATETIME</font></td></tr>
+            <tr><td align="left">deadline_at</td><td align="right"><font color="#64748B">DATETIME</font></td></tr>
+            <tr><td align="left">resolved_at</td><td align="right"><font color="#64748B">DATETIME</font></td></tr>
+            <tr><td align="left">feedback_rating</td><td align="right"><font color="#64748B">INT (1-5)</font></td></tr>
+        </table>
+    >];
+
+    // COMPLAINT_HISTORY
+    complaint_history [label=<
+        <table border="1" cellborder="0" cellspacing="0" cellpadding="3" style="rounded" color="#64748B">
+            <tr><td bgcolor="#B91C1C" colspan="2"><font color="white"><b>complaint_history</b></font></td></tr>
+            <tr><td align="left"><b>id</b></td><td align="right"><font color="#64748B">INT [PK]</font></td></tr>
+            <tr><td align="left">complaint_id</td><td align="right"><font color="#64748B">INT [FK]</font></td></tr>
+            <tr><td align="left">action_type</td><td align="right"><font color="#64748B">ENUM</font></td></tr>
+            <tr><td align="left">from_status</td><td align="right"><font color="#64748B">VARCHAR(50)</font></td></tr>
+            <tr><td align="left">to_status</td><td align="right"><font color="#64748B">VARCHAR(50)</font></td></tr>
+            <tr><td align="left">to_escalation_level</td><td align="right"><font color="#64748B">INT</font></td></tr>
+            <tr><td align="left">performed_by_user_id</td><td align="right"><font color="#64748B">INT [FK, NULL]</font></td></tr>
+            <tr><td align="left">notes</td><td align="right"><font color="#64748B">TEXT</font></td></tr>
+            <tr><td align="left">created_at</td><td align="right"><font color="#64748B">DATETIME</font></td></tr>
+        </table>
+    >];
+
+    // NOTIFICATION_LOGS
+    notification_logs [label=<
+        <table border="1" cellborder="0" cellspacing="0" cellpadding="3" style="rounded" color="#64748B">
+            <tr><td bgcolor="#475569" colspan="2"><font color="white"><b>notification_logs</b></font></td></tr>
+            <tr><td align="left"><b>id</b></td><td align="right"><font color="#64748B">INT [PK]</font></td></tr>
+            <tr><td align="left">recipient_email</td><td align="right"><font color="#64748B">VARCHAR(100)</font></td></tr>
+            <tr><td align="left">recipient_role</td><td align="right"><font color="#64748B">VARCHAR(50)</font></td></tr>
+            <tr><td align="left">event_type</td><td align="right"><font color="#64748B">ENUM</font></td></tr>
+            <tr><td align="left">complaint_id</td><td align="right"><font color="#64748B">INT [FK, NULL]</font></td></tr>
+            <tr><td align="left">status</td><td align="right"><font color="#64748B">ENUM(sent,failed)</font></td></tr>
+            <tr><td align="left">sent_at</td><td align="right"><font color="#64748B">DATETIME</font></td></tr>
+        </table>
+    >];
+
+    // TRIAGE_KEYWORDS
+    triage_keywords [label=<
+        <table border="1" cellborder="0" cellspacing="0" cellpadding="3" style="rounded" color="#64748B">
+            <tr><td bgcolor="#475569" colspan="2"><font color="white"><b>triage_keywords</b></font></td></tr>
+            <tr><td align="left"><b>id</b></td><td align="right"><font color="#64748B">INT [PK]</font></td></tr>
+            <tr><td align="left">keyword</td><td align="right"><font color="#64748B">VARCHAR(100) [UQ]</font></td></tr>
+            <tr><td align="left">category</td><td align="right"><font color="#64748B">ENUM</font></td></tr>
+            <tr><td align="left">urgency</td><td align="right"><font color="#64748B">ENUM</font></td></tr>
+            <tr><td align="left">weight</td><td align="right"><font color="#64748B">INT</font></td></tr>
+            <tr><td align="left">is_active</td><td align="right"><font color="#64748B">BOOLEAN</font></td></tr>
+        </table>
+    >];
+
+    // AUDIT_LOGS
+    audit_logs [label=<
+        <table border="1" cellborder="0" cellspacing="0" cellpadding="3" style="rounded" color="#64748B">
+            <tr><td bgcolor="#475569" colspan="2"><font color="white"><b>audit_logs</b></font></td></tr>
+            <tr><td align="left"><b>id</b></td><td align="right"><font color="#64748B">INT [PK]</font></td></tr>
+            <tr><td align="left">user_id</td><td align="right"><font color="#64748B">INT [FK, NULL]</font></td></tr>
+            <tr><td align="left">action</td><td align="right"><font color="#64748B">VARCHAR(100)</font></td></tr>
+            <tr><td align="left">entity_name</td><td align="right"><font color="#64748B">VARCHAR(50)</font></td></tr>
+            <tr><td align="left">entity_id</td><td align="right"><font color="#64748B">INT</font></td></tr>
+            <tr><td align="left">created_at</td><td align="right"><font color="#64748B">DATETIME</font></td></tr>
+        </table>
+    >];
+
+    // RELATIONSHIPS
+    users -> user_role [xlabel="1:N"];
+    roles -> user_role [xlabel="1:N"];
+    users -> student_profiles [xlabel="1:1"];
+    users -> staff_profiles [xlabel="1:1"];
+    maintenance_units -> staff_profiles [xlabel="0..1:N"];
+    hostels -> staff_profiles [xlabel="0..1:N"];
+
+    hostels -> rooms [xlabel="1:N"];
+    rooms -> bed_spaces [xlabel="1:N"];
+
+    student_profiles -> allocations [xlabel="1:N"];
+    bed_spaces -> allocations [xlabel="1:N"];
+    academic_sessions -> allocations [xlabel="1:N"];
+
+    student_profiles -> complaints [xlabel="1:N"];
+    rooms -> complaints [xlabel="1:N"];
+    maintenance_units -> complaints [xlabel="1:N"];
+    staff_profiles -> complaints [xlabel="0..1:N"];
+
+    complaints -> complaint_history [xlabel="1:N"];
+    complaints -> notification_logs [xlabel="1:N"];
+    users -> audit_logs [xlabel="0..1:N"];
+}
